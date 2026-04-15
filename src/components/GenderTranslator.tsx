@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { translate, suggestions } from "@/data/translations";
 import type { Direction, AgeGroup } from "@/data/translations";
+import { speakSarcastic, stopSpeaking, preloadVoices } from "@/lib/sarcasticVoiceEngine";
 import micIcon from "@/assets/mic-icon.png";
 import speakerIcon from "@/assets/speaker-icon.png";
 
@@ -48,9 +49,8 @@ export default function GenderTranslator() {
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const loadVoices = () => window.speechSynthesis.getVoices();
-    loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
+    preloadVoices();
+    window.speechSynthesis.onvoiceschanged = () => preloadVoices();
     return () => {
       window.speechSynthesis.onvoiceschanged = null;
     };
@@ -131,89 +131,23 @@ export default function GenderTranslator() {
     }
   };
 
-  const getVoiceForDirection = useCallback((dir: Direction): SpeechSynthesisVoice | null => {
-    const voices = window.speechSynthesis.getVoices();
-    const wantFemale = dir === "menToWomen";
-    const englishVoices = voices.filter((v) => v.lang.toLowerCase().startsWith("en"));
-
-    const premiumKeywords = ["natural", "neural", "online", "premium", "enhanced", "google", "siri"];
-    const femaleNames = ["microsoft jenny", "microsoft zira", "google uk english female", "samantha", "victoria", "karen", "tessa", "fiona", "moira", "alice", "hazel", "susan", "jenny", "aria", "ava", "serena", "emma"];
-    const maleNames = ["microsoft david", "microsoft mark", "google uk english male", "daniel", "alex", "tom", "james", "david", "mark", "fred", "guy", "reed", "aaron", "arthur", "oliver", "brian"];
-
-    const targetNames = wantFemale ? femaleNames : maleNames;
-    const oppositeNames = wantFemale ? maleNames : femaleNames;
-
-    const voiceMatches = (voice: SpeechSynthesisVoice, names: string[]) => {
-      const name = voice.name.toLowerCase();
-      return names.some((candidate) => name.includes(candidate));
-    };
-
-    const targetVoices = englishVoices.filter((voice) => {
-      const name = voice.name.toLowerCase();
-      return voiceMatches(voice, targetNames) && !oppositeNames.some((candidate) => name.includes(candidate));
-    });
-
-    const exactPriority = wantFemale
-      ? ["microsoft jenny", "microsoft zira", "google uk english female", "samantha", "victoria", "karen"]
-      : ["microsoft david", "microsoft mark", "google uk english male", "daniel", "alex", "james"];
-
-    const exactMatch = exactPriority
-      .map((preferred) => targetVoices.find((voice) => voice.name.toLowerCase().includes(preferred)))
-      .find(Boolean);
-    if (exactMatch) return exactMatch;
-
-    const scoreVoice = (voice: SpeechSynthesisVoice) => {
-      const name = voice.name.toLowerCase();
-      let score = 0;
-      if (premiumKeywords.some((keyword) => name.includes(keyword))) score += 5;
-      if (voice.localService) score += 2;
-      if (voice.default) score += 1;
-      return score;
-    };
-
-    const rankedTargetVoices = [...targetVoices].sort((a, b) => scoreVoice(b) - scoreVoice(a));
-
-    if (rankedTargetVoices.length > 0) return rankedTargetVoices[0];
-
-    const nonOppositePremium = englishVoices.find((voice) => {
-      const name = voice.name.toLowerCase();
-      return premiumKeywords.some((keyword) => name.includes(keyword)) && !oppositeNames.some((candidate) => name.includes(candidate));
-    });
-    if (nonOppositePremium) return nonOppositePremium;
-
-    return englishVoices.find((voice) => !oppositeNames.some((candidate) => voice.name.toLowerCase().includes(candidate))) || englishVoices[0] || voices[0] || null;
-  }, []);
-
   const handleSpeak = useCallback(() => {
     if (!output) return;
     if (isSpeaking) {
-      window.speechSynthesis.cancel();
+      stopSpeaking();
       setIsSpeaking(false);
       return;
     }
 
-    // Add dramatic pauses for sarcastic, human-like delivery
-    const sarcasticText = output
-      .replace(/\.\.\./g, '... ... ')
-      .replace(/\!/g, '! ... ')
-      .replace(/\?/g, '? ... ');
-
-    const utterance = new SpeechSynthesisUtterance(sarcasticText);
-    
-    // Sarcastic human delivery: slightly slower, expressive pitch
-    utterance.rate = 0.88;
-    utterance.pitch = direction === "menToWomen" ? 1.15 : 0.85;
-    
-    const voice = getVoiceForDirection(direction);
-    if (voice) {
-      utterance.voice = voice;
-      utterance.lang = voice.lang;
-    }
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    speakSarcastic({
+      text: output,
+      direction,
+      onStart: () => setIsSpeaking(true),
+      onEnd: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false),
+    });
     setIsSpeaking(true);
-    window.speechSynthesis.speak(utterance);
-  }, [output, direction, isSpeaking, getVoiceForDirection]);
+  }, [output, direction, isSpeaking]);
 
   const handleCopy = () => {
     if (!output) return;
@@ -223,7 +157,7 @@ export default function GenderTranslator() {
   const handleClear = () => {
     setInput("");
     setOutput("");
-    window.speechSynthesis.cancel();
+    stopSpeaking();
     setIsSpeaking(false);
   };
 
