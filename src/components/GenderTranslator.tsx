@@ -137,8 +137,8 @@ export default function GenderTranslator() {
     const englishVoices = voices.filter((v) => v.lang.toLowerCase().startsWith("en"));
 
     const premiumKeywords = ["natural", "neural", "online", "premium", "enhanced", "google", "siri"];
-    const femaleNames = ["samantha", "karen", "victoria", "tessa", "fiona", "moira", "alice", "zira", "hazel", "susan", "jenny", "aria", "ava", "serena", "emma", "female", "woman", "girl"];
-    const maleNames = ["daniel", "alex", "tom", "james", "david", "mark", "fred", "guy", "reed", "aaron", "arthur", "oliver", "brian", "male", "man", "boy"];
+    const femaleNames = ["microsoft jenny", "microsoft zira", "google uk english female", "samantha", "victoria", "karen", "tessa", "fiona", "moira", "alice", "hazel", "susan", "jenny", "aria", "ava", "serena", "emma"];
+    const maleNames = ["microsoft david", "microsoft mark", "google uk english male", "daniel", "alex", "tom", "james", "david", "mark", "fred", "guy", "reed", "aaron", "arthur", "oliver", "brian"];
 
     const targetNames = wantFemale ? femaleNames : maleNames;
     const oppositeNames = wantFemale ? maleNames : femaleNames;
@@ -162,12 +162,18 @@ export default function GenderTranslator() {
       .find(Boolean);
     if (exactMatch) return exactMatch;
 
-    const premiumTarget = targetVoices.find((voice) =>
-      premiumKeywords.some((keyword) => voice.name.toLowerCase().includes(keyword))
-    );
-    if (premiumTarget) return premiumTarget;
+    const scoreVoice = (voice: SpeechSynthesisVoice) => {
+      const name = voice.name.toLowerCase();
+      let score = 0;
+      if (premiumKeywords.some((keyword) => name.includes(keyword))) score += 5;
+      if (voice.localService) score += 2;
+      if (voice.default) score += 1;
+      return score;
+    };
 
-    if (targetVoices.length > 0) return targetVoices[0];
+    const rankedTargetVoices = [...targetVoices].sort((a, b) => scoreVoice(b) - scoreVoice(a));
+
+    if (rankedTargetVoices.length > 0) return rankedTargetVoices[0];
 
     const nonOppositePremium = englishVoices.find((voice) => {
       const name = voice.name.toLowerCase();
@@ -186,15 +192,14 @@ export default function GenderTranslator() {
       return;
     }
     // Add dramatic pauses and emphasis for a more sarcastic, human delivery
-    const sarcText = output
-      .replace(/\.\.\./g, '... ... ')
-      .replace(/\?/g, '? ... ')
-      .replace(/!/g, '! ... ');
-    const utterance = new SpeechSynthesisUtterance(sarcText);
-    utterance.rate = 0.88;  // Slower, more deliberate — dripping with sarcasm
-    utterance.pitch = direction === "menToWomen" ? 1.05 : 0.82;
+    const utterance = new SpeechSynthesisUtterance(output);
+    utterance.rate = 1;
+    utterance.pitch = 1;
     const voice = getVoiceForDirection(direction);
-    if (voice) utterance.voice = voice;
+    if (voice) {
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+    }
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
     setIsSpeaking(true);
