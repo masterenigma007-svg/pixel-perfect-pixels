@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getRandomQuestions } from "@/data/newlywedQuestions";
 import type { NewlywedQuestion } from "@/data/newlywedQuestions";
 
-const QUESTIONS_PER_PLAYER = 4;
+const QUESTIONS_PER_PLAYER = 5;
 
 type GameState = "setup" | "playing" | "reveal" | "results";
 
