@@ -120,6 +120,25 @@ export default function GenderTranslator() {
     }
   };
 
+  const getVoiceForDirection = useCallback((dir: Direction): SpeechSynthesisVoice | null => {
+    const voices = window.speechSynthesis.getVoices();
+    const wantFemale = dir === "menToWomen";
+    const englishVoices = voices.filter((v) => v.lang.startsWith("en"));
+
+    // Try to find a voice matching the target gender by name heuristics
+    const femaleNames = ["female", "woman", "girl", "samantha", "karen", "victoria", "tessa", "fiona", "moira", "alice", "zira", "hazel", "susan", "jenny", "aria"];
+    const maleNames = ["male", "man", "boy", "daniel", "alex", "tom", "james", "david", "mark", "fred", "guy", "reed", "aaron"];
+
+    const targetNames = wantFemale ? femaleNames : maleNames;
+    const match = englishVoices.find((v) =>
+      targetNames.some((n) => v.name.toLowerCase().includes(n))
+    );
+    if (match) return match;
+
+    // Fallback: just pick any English voice
+    return englishVoices[0] || voices[0] || null;
+  }, []);
+
   const handleSpeak = useCallback(() => {
     if (!output) return;
     if (isSpeaking) {
@@ -128,13 +147,15 @@ export default function GenderTranslator() {
       return;
     }
     const utterance = new SpeechSynthesisUtterance(output);
-    utterance.rate = 0.9;
-    utterance.pitch = direction === "menToWomen" ? 1.2 : 0.8;
+    utterance.rate = 0.95;
+    utterance.pitch = 1.0;
+    const voice = getVoiceForDirection(direction);
+    if (voice) utterance.voice = voice;
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
     setIsSpeaking(true);
     window.speechSynthesis.speak(utterance);
-  }, [output, direction, isSpeaking]);
+  }, [output, direction, isSpeaking, getVoiceForDirection]);
 
   const handleCopy = () => {
     if (!output) return;
