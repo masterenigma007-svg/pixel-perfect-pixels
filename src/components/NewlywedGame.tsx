@@ -3,26 +3,44 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getRandomQuestions } from "@/data/newlywedQuestions";
 import type { NewlywedQuestion } from "@/data/newlywedQuestions";
 
-const TOTAL_QUESTIONS = 8;
+const QUESTIONS_PER_PLAYER = 4;
 
-type GameState = "intro" | "playing" | "reveal" | "results";
+type GameState = "setup" | "playing" | "reveal" | "results";
+
+interface PlayerScore {
+  name: string;
+  score: number;
+  answers: { question: string; picked: string; comedy: string }[];
+}
 
 export default function NewlywedGame() {
-  const [gameState, setGameState] = useState<GameState>("intro");
+  const [gameState, setGameState] = useState<GameState>("setup");
+  const [player1Name, setPlayer1Name] = useState("");
+  const [player2Name, setPlayer2Name] = useState("");
   const [questions, setQuestions] = useState<NewlywedQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [score, setScore] = useState(0);
-  const [answers, setAnswers] = useState<{ question: string; picked: string; comedy: string }[]>([]);
+  const [players, setPlayers] = useState<[PlayerScore, PlayerScore]>([
+    { name: "", score: 0, answers: [] },
+    { name: "", score: 0, answers: [] },
+  ]);
+
+  // Current player alternates: 0, 1, 0, 1...
+  const currentPlayerIndex = currentIndex % 2;
+  const currentPlayer = players[currentPlayerIndex];
 
   const startGame = useCallback(() => {
-    setQuestions(getRandomQuestions(TOTAL_QUESTIONS));
+    const p1 = player1Name.trim() || "Player 1";
+    const p2 = player2Name.trim() || "Player 2";
+    setQuestions(getRandomQuestions(QUESTIONS_PER_PLAYER * 2));
     setCurrentIndex(0);
     setSelectedAnswer(null);
-    setScore(0);
-    setAnswers([]);
+    setPlayers([
+      { name: p1, score: 0, answers: [] },
+      { name: p2, score: 0, answers: [] },
+    ]);
     setGameState("playing");
-  }, []);
+  }, [player1Name, player2Name]);
 
   const handleSelect = (option: string) => {
     if (selectedAnswer) return;
@@ -30,8 +48,20 @@ export default function NewlywedGame() {
     const q = questions[currentIndex];
     const comedy = q.comedyAnswers[option] || "Interesting choice...";
     const isCorrect = comedy.includes("🎯");
-    if (isCorrect) setScore((s) => s + 1);
-    setAnswers((prev) => [...prev, { question: q.question, picked: option, comedy }]);
+
+    setPlayers((prev) => {
+      const updated = [...prev] as [PlayerScore, PlayerScore];
+      updated[currentPlayerIndex] = {
+        ...updated[currentPlayerIndex],
+        score: updated[currentPlayerIndex].score + (isCorrect ? 1 : 0),
+        answers: [
+          ...updated[currentPlayerIndex].answers,
+          { question: q.question, picked: option, comedy },
+        ],
+      };
+      return updated;
+    });
+
     setGameState("reveal");
   };
 
@@ -45,7 +75,19 @@ export default function NewlywedGame() {
     }
   };
 
+  const handlePlayAgain = () => {
+    setGameState("setup");
+    setPlayer1Name(players[0].name);
+    setPlayer2Name(players[1].name);
+  };
+
   const q = questions[currentIndex];
+  const winner =
+    players[0].score > players[1].score
+      ? players[0].name
+      : players[1].score > players[0].score
+      ? players[1].name
+      : null;
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -78,28 +120,58 @@ export default function NewlywedGame() {
 
           <div className="p-6">
             <AnimatePresence mode="wait">
-              {gameState === "intro" && (
+              {/* SETUP - Name entry */}
+              {gameState === "setup" && (
                 <motion.div
-                  key="intro"
+                  key="setup"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="text-center space-y-6 py-8"
+                  className="text-center space-y-6 py-6"
                 >
                   <div className="text-6xl">💑</div>
                   <h2 className="text-xl font-bold text-foreground">
-                    How Well Do You Know Your Partner?
+                    Enter Your Names
                   </h2>
                   <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mx-auto">
-                    Inspired by the classic Newlywed Game show! Guess what your partner
-                    <em> really </em> means when they say common phrases. Each correct answer
-                    earns a point. Can you decode the subtext?
+                    Take turns answering questions about what your partner <em>really</em> means.
+                    The player with the most 🎯 wins!
                   </p>
+
+                  <div className="space-y-4 text-left">
+                    <div>
+                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                        👤 Player 1
+                      </label>
+                      <input
+                        type="text"
+                        value={player1Name}
+                        onChange={(e) => setPlayer1Name(e.target.value)}
+                        placeholder="Enter name..."
+                        className="w-full px-4 py-3 border-2 border-border rounded-xl text-sm bg-muted text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                        👤 Player 2
+                      </label>
+                      <input
+                        type="text"
+                        value={player2Name}
+                        onChange={(e) => setPlayer2Name(e.target.value)}
+                        placeholder="Enter name..."
+                        className="w-full px-4 py-3 border-2 border-border rounded-xl text-sm bg-muted text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-2 text-left bg-muted rounded-xl p-4 text-sm text-muted-foreground">
-                    <p>🎯 = Perfect answer</p>
-                    <p>📝 {TOTAL_QUESTIONS} questions per round</p>
+                    <p>🎯 = Perfect answer (1 point)</p>
+                    <p>🔄 Players alternate turns</p>
+                    <p>📝 {QUESTIONS_PER_PLAYER} questions each ({QUESTIONS_PER_PLAYER * 2} total)</p>
                     <p>😂 Comedic reveals after each answer</p>
                   </div>
+
                   <motion.button
                     onClick={startGame}
                     whileHover={{ scale: 1.05 }}
@@ -111,6 +183,7 @@ export default function NewlywedGame() {
                 </motion.div>
               )}
 
+              {/* PLAYING */}
               {gameState === "playing" && q && (
                 <motion.div
                   key={`q-${currentIndex}`}
@@ -119,10 +192,20 @@ export default function NewlywedGame() {
                   exit={{ opacity: 0, x: -30 }}
                   className="space-y-5"
                 >
+                  {/* Scoreboard */}
+                  <div className="flex items-center justify-between bg-muted rounded-xl p-3">
+                    <div className={`text-xs font-bold ${currentPlayerIndex === 0 ? "text-primary" : "text-muted-foreground"}`}>
+                      {players[0].name}: {players[0].score} 🎯
+                    </div>
+                    <div className="text-xs text-muted-foreground">vs</div>
+                    <div className={`text-xs font-bold ${currentPlayerIndex === 1 ? "text-primary" : "text-muted-foreground"}`}>
+                      {players[1].name}: {players[1].score} 🎯
+                    </div>
+                  </div>
+
                   {/* Progress */}
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>Question {currentIndex + 1} of {questions.length}</span>
-                    <span>Score: {score} 🎯</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2">
                     <div
@@ -131,14 +214,26 @@ export default function NewlywedGame() {
                     />
                   </div>
 
+                  {/* Current player turn */}
+                  <div className="flex justify-center">
+                    <motion.span
+                      key={currentPlayerIndex}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="text-sm font-bold px-4 py-1.5 rounded-full bg-primary/20 text-primary border border-primary/30"
+                    >
+                      🎮 {currentPlayer.name}'s Turn
+                    </motion.span>
+                  </div>
+
                   {/* Perspective badge */}
                   <div className="flex justify-center">
                     <span
                       className="text-xs font-bold px-3 py-1 rounded-full"
                       style={{
                         background: q.perspective === "hers"
-                          ? "linear-gradient(135deg, #e9d5ff, #a855f7)"
-                          : "linear-gradient(135deg, #6ee7b7, #10b981)",
+                          ? "linear-gradient(135deg, hsl(270 80% 85%), hsl(270 80% 60%))"
+                          : "linear-gradient(135deg, hsl(160 60% 75%), hsl(160 60% 45%))",
                         color: "#fff",
                       }}
                     >
@@ -171,6 +266,7 @@ export default function NewlywedGame() {
                 </motion.div>
               )}
 
+              {/* REVEAL */}
               {gameState === "reveal" && q && (
                 <motion.div
                   key={`reveal-${currentIndex}`}
@@ -179,9 +275,15 @@ export default function NewlywedGame() {
                   exit={{ opacity: 0 }}
                   className="space-y-5"
                 >
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Question {currentIndex + 1} of {questions.length}</span>
-                    <span>Score: {score} 🎯</span>
+                  {/* Scoreboard */}
+                  <div className="flex items-center justify-between bg-muted rounded-xl p-3">
+                    <div className="text-xs font-bold text-foreground">
+                      {players[0].name}: {players[0].score} 🎯
+                    </div>
+                    <div className="text-xs text-muted-foreground">vs</div>
+                    <div className="text-xs font-bold text-foreground">
+                      {players[1].name}: {players[1].score} 🎯
+                    </div>
                   </div>
 
                   <h3 className="text-lg font-bold text-foreground text-center">
@@ -190,7 +292,7 @@ export default function NewlywedGame() {
 
                   {/* Selected answer */}
                   <div className="bg-muted rounded-xl p-4 border-2 border-primary/50">
-                    <p className="text-xs text-muted-foreground mb-1">You answered:</p>
+                    <p className="text-xs text-muted-foreground mb-1">{currentPlayer.name} answered:</p>
                     <p className="text-sm font-semibold text-foreground">{selectedAnswer}</p>
                   </div>
 
@@ -202,7 +304,7 @@ export default function NewlywedGame() {
                   >
                     <p className="text-xs text-secondary font-bold mb-2">🎭 The Real Answer:</p>
                     <p className="text-sm text-foreground leading-relaxed italic">
-                      {answers[answers.length - 1]?.comedy}
+                      {players[currentPlayerIndex].answers[players[currentPlayerIndex].answers.length - 1]?.comedy}
                     </p>
                   </motion.div>
 
@@ -213,12 +315,15 @@ export default function NewlywedGame() {
                       whileTap={{ scale: 0.95 }}
                       className="bg-gradient-to-r from-primary to-pink-500 text-primary-foreground px-6 py-2.5 rounded-full font-bold text-sm shadow-md"
                     >
-                      {currentIndex + 1 >= questions.length ? "See Results" : "Next Question →"}
+                      {currentIndex + 1 >= questions.length
+                        ? "See Results"
+                        : `Next → ${players[(currentPlayerIndex + 1) % 2].name}'s Turn`}
                     </motion.button>
                   </div>
                 </motion.div>
               )}
 
+              {/* RESULTS */}
               {gameState === "results" && (
                 <motion.div
                   key="results"
@@ -228,35 +333,55 @@ export default function NewlywedGame() {
                   className="space-y-6 py-4"
                 >
                   <div className="text-center space-y-3">
-                    <div className="text-5xl">
-                      {score >= questions.length * 0.8 ? "🏆" : score >= questions.length * 0.5 ? "👏" : "😅"}
-                    </div>
+                    <div className="text-5xl">{winner ? "🏆" : "🤝"}</div>
                     <h2 className="text-2xl font-bold text-foreground">
-                      You scored {score} out of {questions.length}!
+                      {winner ? `${winner} Wins!` : "It's a Tie!"}
                     </h2>
                     <p className="text-sm text-muted-foreground italic">
-                      {score >= questions.length * 0.8
-                        ? "You're a relationship decoder! Teach us your ways."
-                        : score >= questions.length * 0.5
-                        ? "Not bad! You understand some of the code. Keep studying."
-                        : "Oh dear. You might want to have a few more conversations with your partner. 😂"}
+                      {winner
+                        ? `${winner} clearly knows their partner better... or got luckier!`
+                        : "You're equally matched — or equally clueless. Either way, it's love! 😂"}
                     </p>
                   </div>
 
-                  {/* Review */}
-                  <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {answers.map((a, i) => (
-                      <div key={i} className="bg-muted rounded-xl p-3 text-xs space-y-1">
-                        <p className="font-semibold text-foreground">{a.question}</p>
-                        <p className="text-muted-foreground">You said: {a.picked}</p>
-                        <p className="text-secondary italic">{a.comedy}</p>
+                  {/* Final scores */}
+                  <div className="flex gap-3">
+                    {players.map((p, i) => (
+                      <div
+                        key={i}
+                        className={`flex-1 text-center p-4 rounded-xl border-2 ${
+                          winner === p.name
+                            ? "border-primary bg-primary/10"
+                            : "border-border bg-muted"
+                        }`}
+                      >
+                        <p className="text-2xl font-bold text-foreground">{p.score}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{p.name}</p>
                       </div>
                     ))}
                   </div>
 
+                  {/* Review per player */}
+                  {players.map((p, pi) => (
+                    <div key={pi}>
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                        {p.name}'s Answers
+                      </p>
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {p.answers.map((a, i) => (
+                          <div key={i} className="bg-muted rounded-xl p-3 text-xs space-y-1">
+                            <p className="font-semibold text-foreground">{a.question}</p>
+                            <p className="text-muted-foreground">Said: {a.picked}</p>
+                            <p className="text-secondary italic">{a.comedy}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
                   <div className="flex justify-center gap-3">
                     <motion.button
-                      onClick={startGame}
+                      onClick={handlePlayAgain}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       className="bg-gradient-to-r from-primary to-pink-500 text-primary-foreground px-6 py-2.5 rounded-full font-bold text-sm shadow-md"
