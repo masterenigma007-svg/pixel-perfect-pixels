@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { translate, suggestions } from "@/data/translations";
 import type { Direction, AgeGroup } from "@/data/translations";
+import micIcon from "@/assets/mic-icon.png";
+import speakerIcon from "@/assets/speaker-icon.png";
 
 interface HistoryItem {
   input: string;
@@ -9,27 +11,6 @@ interface HistoryItem {
   direction: Direction;
   ageGroup: AgeGroup;
   timestamp: number;
-}
-
-function MicIcon({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
-      <rect x="8" y="3" width="8" height="12" rx="4" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M6 11.5C6 15 8.7 18 12 18C15.3 18 18 15 18 11.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M12 18V21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M9 21H15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function SpeakerIcon({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
-      <path d="M5 14H8L13 18V6L8 10H5V14Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="M16 9.5C17.2 10.4 18 11.85 18 13.5C18 15.15 17.2 16.6 16 17.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M18.5 7C20.35 8.5 21.5 10.86 21.5 13.5C21.5 16.14 20.35 18.5 18.5 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
 }
 
 const AGE_GROUPS: { id: AgeGroup; label: string }[] = [
@@ -402,7 +383,7 @@ export default function GenderTranslator() {
                     : "bg-secondary text-secondary-foreground hover:opacity-90 hover:scale-105"
                 }`}
               >
-                <MicIcon />
+                <img src={micIcon} alt="Microphone" className="w-7 h-7 object-contain" />
               </button>
 
               <motion.button
@@ -423,7 +404,7 @@ export default function GenderTranslator() {
                     : "bg-secondary text-secondary-foreground hover:opacity-90 hover:scale-105"
                 }`}
               >
-                {isSpeaking ? <span className="text-base leading-none">■</span> : <SpeakerIcon />}
+                {isSpeaking ? <span className="text-base leading-none">■</span> : <img src={speakerIcon} alt="Speaker" className="w-7 h-7 object-contain" />}
               </button>
 
               <button
