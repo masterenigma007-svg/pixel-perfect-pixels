@@ -352,7 +352,7 @@ export default function GenderTranslator() {
             </div>
 
             {/* Output */}
-            <div className="relative">
+            <div>
               <AnimatePresence mode="wait">
                 {isTranslating ? (
                   <motion.div
@@ -389,12 +389,14 @@ export default function GenderTranslator() {
                 )}
               </AnimatePresence>
               {output && !isTranslating && (
-                <button
-                  onClick={handleCopy}
-                  className="absolute top-2 right-2 text-xs bg-muted-foreground/20 hover:bg-muted-foreground/30 text-foreground px-2.5 py-1 rounded-md transition-all"
-                >
-                  Copy
-                </button>
+                <div className="flex justify-end mt-1.5">
+                  <button
+                    onClick={handleCopy}
+                    className="text-xs bg-muted-foreground/20 hover:bg-muted-foreground/30 text-foreground px-2.5 py-1 rounded-md transition-all"
+                  >
+                    Copy
+                  </button>
+                </div>
               )}
             </div>
 
