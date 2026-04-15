@@ -123,35 +123,39 @@ export default function GenderTranslator() {
   const getVoiceForDirection = useCallback((dir: Direction): SpeechSynthesisVoice | null => {
     const voices = window.speechSynthesis.getVoices();
     const wantFemale = dir === "menToWomen";
-    const englishVoices = voices.filter((v) => v.lang.startsWith("en"));
+    const englishVoices = voices.filter((v) => v.lang.toLowerCase().startsWith("en"));
 
-    // Prefer premium/natural voices (Google, Microsoft Neural, Apple) for more human sound
-    const premiumKeywords = ["natural", "neural", "online", "premium", "enhanced", "google"];
-    const femaleNames = ["samantha", "karen", "victoria", "tessa", "fiona", "moira", "alice", "zira", "hazel", "susan", "jenny", "aria", "siri female", "google uk english female", "microsoft zira", "microsoft jenny"];
-    const maleNames = ["daniel", "alex", "tom", "james", "david", "mark", "fred", "guy", "reed", "aaron", "google uk english male", "microsoft david", "microsoft mark", "siri male"];
+    const premiumKeywords = ["natural", "neural", "online", "premium", "enhanced", "google", "siri"];
+    const femaleNames = ["samantha", "karen", "victoria", "tessa", "fiona", "moira", "alice", "zira", "hazel", "susan", "jenny", "aria", "ava", "serena", "emma", "female", "woman", "girl"];
+    const maleNames = ["daniel", "alex", "tom", "james", "david", "mark", "fred", "guy", "reed", "aaron", "arthur", "oliver", "brian", "male", "man", "boy"];
 
     const targetNames = wantFemale ? femaleNames : maleNames;
+    const oppositeNames = wantFemale ? maleNames : femaleNames;
 
-    // First try: premium/natural voice matching target gender
-    const premiumMatch = englishVoices.find((v) => {
-      const name = v.name.toLowerCase();
-      return targetNames.some((n) => name.includes(n)) && premiumKeywords.some((k) => name.includes(k));
+    const voiceMatches = (voice: SpeechSynthesisVoice, names: string[]) => {
+      const name = voice.name.toLowerCase();
+      return names.some((candidate) => name.includes(candidate));
+    };
+
+    const targetVoices = englishVoices.filter((voice) => {
+      const name = voice.name.toLowerCase();
+      return voiceMatches(voice, targetNames) && !oppositeNames.some((candidate) => name.includes(candidate));
     });
-    if (premiumMatch) return premiumMatch;
 
-    // Second try: any voice matching target gender
-    const genderMatch = englishVoices.find((v) =>
-      targetNames.some((n) => v.name.toLowerCase().includes(n))
+    const premiumTarget = targetVoices.find((voice) =>
+      premiumKeywords.some((keyword) => voice.name.toLowerCase().includes(keyword))
     );
-    if (genderMatch) return genderMatch;
+    if (premiumTarget) return premiumTarget;
 
-    // Third try: any premium English voice
-    const anyPremium = englishVoices.find((v) =>
-      premiumKeywords.some((k) => v.name.toLowerCase().includes(k))
-    );
-    if (anyPremium) return anyPremium;
+    if (targetVoices.length > 0) return targetVoices[0];
 
-    return englishVoices[0] || voices[0] || null;
+    const nonOppositePremium = englishVoices.find((voice) => {
+      const name = voice.name.toLowerCase();
+      return premiumKeywords.some((keyword) => name.includes(keyword)) && !oppositeNames.some((candidate) => name.includes(candidate));
+    });
+    if (nonOppositePremium) return nonOppositePremium;
+
+    return englishVoices.find((voice) => !oppositeNames.some((candidate) => voice.name.toLowerCase().includes(candidate))) || englishVoices[0] || voices[0] || null;
   }, []);
 
   const handleSpeak = useCallback(() => {
@@ -168,7 +172,7 @@ export default function GenderTranslator() {
       .replace(/!/g, '! ... ');
     const utterance = new SpeechSynthesisUtterance(sarcText);
     utterance.rate = 0.88;  // Slower, more deliberate — dripping with sarcasm
-    utterance.pitch = 0.92; // Slightly lower pitch for dry delivery
+    utterance.pitch = direction === "menToWomen" ? 1.05 : 0.82;
     const voice = getVoiceForDirection(direction);
     if (voice) utterance.voice = voice;
     utterance.onend = () => setIsSpeaking(false);
