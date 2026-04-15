@@ -125,17 +125,32 @@ export default function GenderTranslator() {
     const wantFemale = dir === "menToWomen";
     const englishVoices = voices.filter((v) => v.lang.startsWith("en"));
 
-    // Try to find a voice matching the target gender by name heuristics
-    const femaleNames = ["female", "woman", "girl", "samantha", "karen", "victoria", "tessa", "fiona", "moira", "alice", "zira", "hazel", "susan", "jenny", "aria"];
-    const maleNames = ["male", "man", "boy", "daniel", "alex", "tom", "james", "david", "mark", "fred", "guy", "reed", "aaron"];
+    // Prefer premium/natural voices (Google, Microsoft Neural, Apple) for more human sound
+    const premiumKeywords = ["natural", "neural", "online", "premium", "enhanced", "google"];
+    const femaleNames = ["samantha", "karen", "victoria", "tessa", "fiona", "moira", "alice", "zira", "hazel", "susan", "jenny", "aria", "siri female", "google uk english female", "microsoft zira", "microsoft jenny"];
+    const maleNames = ["daniel", "alex", "tom", "james", "david", "mark", "fred", "guy", "reed", "aaron", "google uk english male", "microsoft david", "microsoft mark", "siri male"];
 
     const targetNames = wantFemale ? femaleNames : maleNames;
-    const match = englishVoices.find((v) =>
+
+    // First try: premium/natural voice matching target gender
+    const premiumMatch = englishVoices.find((v) => {
+      const name = v.name.toLowerCase();
+      return targetNames.some((n) => name.includes(n)) && premiumKeywords.some((k) => name.includes(k));
+    });
+    if (premiumMatch) return premiumMatch;
+
+    // Second try: any voice matching target gender
+    const genderMatch = englishVoices.find((v) =>
       targetNames.some((n) => v.name.toLowerCase().includes(n))
     );
-    if (match) return match;
+    if (genderMatch) return genderMatch;
 
-    // Fallback: just pick any English voice
+    // Third try: any premium English voice
+    const anyPremium = englishVoices.find((v) =>
+      premiumKeywords.some((k) => v.name.toLowerCase().includes(k))
+    );
+    if (anyPremium) return anyPremium;
+
     return englishVoices[0] || voices[0] || null;
   }, []);
 
