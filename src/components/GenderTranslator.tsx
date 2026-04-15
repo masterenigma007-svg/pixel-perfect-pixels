@@ -11,6 +11,27 @@ interface HistoryItem {
   timestamp: number;
 }
 
+function MicIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
+      <rect x="8" y="3" width="8" height="12" rx="4" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M6 11.5C6 15 8.7 18 12 18C15.3 18 18 15 18 11.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M12 18V21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M9 21H15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SpeakerIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
+      <path d="M5 14H8L13 18V6L8 10H5V14Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M16 9.5C17.2 10.4 18 11.85 18 13.5C18 15.15 17.2 16.6 16 17.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M18.5 7C20.35 8.5 21.5 10.86 21.5 13.5C21.5 16.14 20.35 18.5 18.5 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const AGE_GROUPS: { id: AgeGroup; label: string }[] = [
   { id: "teen", label: "Teen" },
   { id: "young-adult", label: "Young Adult" },
@@ -44,6 +65,15 @@ export default function GenderTranslator() {
   const recognitionRef = useRef<any>(null);
   const doTranslateRef = useRef<((text: string, dir?: Direction, age?: AgeGroup) => void) | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const loadVoices = () => window.speechSynthesis.getVoices();
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -141,6 +171,15 @@ export default function GenderTranslator() {
       const name = voice.name.toLowerCase();
       return voiceMatches(voice, targetNames) && !oppositeNames.some((candidate) => name.includes(candidate));
     });
+
+    const exactPriority = wantFemale
+      ? ["microsoft jenny", "microsoft zira", "google uk english female", "samantha", "victoria", "karen"]
+      : ["microsoft david", "microsoft mark", "google uk english male", "daniel", "alex", "james"];
+
+    const exactMatch = exactPriority
+      .map((preferred) => targetVoices.find((voice) => voice.name.toLowerCase().includes(preferred)))
+      .find(Boolean);
+    if (exactMatch) return exactMatch;
 
     const premiumTarget = targetVoices.find((voice) =>
       premiumKeywords.some((keyword) => voice.name.toLowerCase().includes(keyword))
@@ -363,7 +402,7 @@ export default function GenderTranslator() {
                     : "bg-secondary text-secondary-foreground hover:opacity-90 hover:scale-105"
                 }`}
               >
-                🎤
+                <MicIcon />
               </button>
 
               <motion.button
@@ -384,7 +423,7 @@ export default function GenderTranslator() {
                     : "bg-secondary text-secondary-foreground hover:opacity-90 hover:scale-105"
                 }`}
               >
-                {isSpeaking ? "⏹" : "🔊"}
+                {isSpeaking ? <span className="text-base leading-none">■</span> : <SpeakerIcon />}
               </button>
 
               <button
