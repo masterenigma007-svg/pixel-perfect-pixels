@@ -41,7 +41,7 @@ export default function GenderTranslator() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [toast, setToast] = useState("");
   const [isTranslating, setIsTranslating] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
   const doTranslateRef = useRef<((text: string, dir?: Direction, age?: AgeGroup) => void) | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
