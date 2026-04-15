@@ -191,10 +191,19 @@ export default function GenderTranslator() {
       setIsSpeaking(false);
       return;
     }
-    // Add dramatic pauses and emphasis for a more sarcastic, human delivery
-    const utterance = new SpeechSynthesisUtterance(output);
-    utterance.rate = 1;
-    utterance.pitch = 1;
+
+    // Add dramatic pauses for sarcastic, human-like delivery
+    const sarcasticText = output
+      .replace(/\.\.\./g, '... ... ')
+      .replace(/\!/g, '! ... ')
+      .replace(/\?/g, '? ... ');
+
+    const utterance = new SpeechSynthesisUtterance(sarcasticText);
+    
+    // Sarcastic human delivery: slightly slower, expressive pitch
+    utterance.rate = 0.88;
+    utterance.pitch = direction === "menToWomen" ? 1.15 : 0.85;
+    
     const voice = getVoiceForDirection(direction);
     if (voice) {
       utterance.voice = voice;
