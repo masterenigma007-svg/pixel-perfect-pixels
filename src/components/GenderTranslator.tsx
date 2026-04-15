@@ -157,7 +157,7 @@ export default function GenderTranslator() {
   const handleClear = () => {
     setInput("");
     setOutput("");
-    window.speechSynthesis.cancel();
+    stopSpeaking();
     setIsSpeaking(false);
   };
 
