@@ -203,7 +203,7 @@ export default function GenderTranslator() {
             className="text-4xl md:text-5xl font-bold mirage-text drop-shadow-sm"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
           >
-            Relationship Saver Gender Translator
+            Relationship Saver Translator
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}
