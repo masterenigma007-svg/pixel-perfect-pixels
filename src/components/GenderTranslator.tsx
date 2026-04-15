@@ -49,9 +49,8 @@ export default function GenderTranslator() {
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const loadVoices = () => window.speechSynthesis.getVoices();
-    loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
+    preloadVoices();
+    window.speechSynthesis.onvoiceschanged = () => preloadVoices();
     return () => {
       window.speechSynthesis.onvoiceschanged = null;
     };
