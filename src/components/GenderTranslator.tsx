@@ -122,7 +122,7 @@ export default function GenderTranslator() {
 
   const getVoiceForDirection = useCallback((dir: Direction): SpeechSynthesisVoice | null => {
     const voices = window.speechSynthesis.getVoices();
-    const wantFemale = dir === "womenToMen";
+    const wantFemale = dir === "menToWomen";
     const englishVoices = voices.filter((v) => v.lang.startsWith("en"));
 
     // Prefer premium/natural voices (Google, Microsoft Neural, Apple) for more human sound
