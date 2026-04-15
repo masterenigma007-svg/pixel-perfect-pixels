@@ -38,6 +38,17 @@ const menToWomenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I was going to do that": "I had no intention of doing that until you mentioned it",
     "I'm not jealous": "I have been jealous since the moment you mentioned that name",
     "Never mind": "Please mind. Keep asking. Don't give up on this.",
+    // Comedic tropes
+    "I'm going out with the boys": "I will return at 3am smelling like nachos and regret",
+    "I forgot": "I remembered, panicked, and hoped you'd forget too",
+    "It's just a game": "It's the Super Bowl and I've emotionally invested my entire identity in this",
+    "I can fix that": "I will make it worse, call my dad, then pretend I fixed it",
+    "She's just a friend": "She was a friend before I knew you existed and now I'm terrified",
+    "I wasn't looking at her": "I was looking at her and my neck did a full 180",
+    "Five more minutes": "Five more minutes means one more episode which means three more hours",
+    "I'm on my way": "I haven't put my shoes on yet",
+    "That's not what I meant": "That's exactly what I meant but your reaction scared me",
+    "Let me explain": "I have no explanation but I need time to invent one",
   },
 
   "young-adult": {
@@ -76,6 +87,18 @@ const menToWomenPhrases: Record<AgeGroup, Record<string, string>> = {
     "Never mind": "I will mind for the next 72 hours",
     "I didn't say anything": "I communicated an entire novel through tone and expression",
     "I'm not into labels": "I want all the benefits of commitment without the vulnerability of asking for it",
+    // Comedic tropes
+    "I'm going out with the boys": "We will do absolutely nothing productive and it will be glorious",
+    "I forgot our anniversary": "I remembered at 4pm and panic-ordered flowers from a gas station",
+    "It's just a game": "My fantasy football team is the only thing giving me purpose right now",
+    "I can fix that": "YouTube tutorial plus overconfidence equals a call to the plumber tomorrow",
+    "She's just a friend": "She's a friend I'm vaguely terrified of you meeting",
+    "I wasn't staring": "I was conducting a peer-reviewed visual assessment",
+    "Five more minutes": "I've entered a time vortex and minutes have no meaning",
+    "I'm on my way": "I'm mentally on my way. Physically I'm still on the couch.",
+    "That's not what I meant": "It's exactly what I meant and I'm now doing damage control",
+    "Let me think about it": "I'm hoping this problem solves itself if I ignore it long enough",
+    "I don't need therapy": "I need therapy desperately but my pride is load-bearing",
   },
 
   adult: {
@@ -114,6 +137,19 @@ const menToWomenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I didn't say anything": "I said an entire paragraph with my silence",
     "I'm fine with whatever movie you want": "There is exactly one correct answer and I will know if you missed it",
     "I'm not upset about that": "I wasn't until you said I shouldn't be",
+    // Comedic tropes
+    "I'm going out with the boys": "I need 4 hours of doing nothing disguised as socializing",
+    "I forgot our anniversary": "I have a recurring calendar reminder that I snoozed 6 times",
+    "It's just a game": "My emotional stability is directly tied to this score right now",
+    "I can fix that": "I will spend $200 in tools to avoid a $50 repair bill",
+    "She's just a friend": "She was a friend before marriage and I live in fear of this conversation",
+    "I wasn't looking": "I looked. My ancestors looked. It's involuntary and I'm sorry.",
+    "Five more minutes": "Five minutes in man-time is 35 minutes in real-time",
+    "I'm on my way": "I'm standing in front of the mirror wondering if I need a jacket",
+    "The thermostat is fine": "I will defend this temperature setting with my dying breath",
+    "I don't need to ask for directions": "I have been lost for twenty minutes and I will find my way or die trying",
+    "I'm not lost": "I am profoundly lost but I've committed to this route emotionally",
+    "Let me just check one thing": "I'm about to disappear into the garage for two hours",
   },
 
   "middle-aged": {
@@ -152,6 +188,18 @@ const menToWomenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I'm fine with whatever restaurant you want": "I need you to pick because I've made every other decision today",
     "I didn't say anything": "My silence was a full paragraph you chose not to read",
     "I'm not upset about that": "I've moved past upset into a kind of weary acceptance",
+    // Comedic tropes
+    "I'm going out with the boys": "I'm going to sit in someone's garage, drink two beers, and complain about my back",
+    "I forgot": "I remembered, got distracted by a home improvement project, and now it's too late",
+    "It's just a game": "It's the only thing I have left that's just mine",
+    "I can fix that": "I will consult seventeen YouTube videos and still call a professional",
+    "The thermostat is fine": "Touch it and we're having a family meeting",
+    "I'm not lost": "I've been driving in circles for 25 minutes but I recognize that tree",
+    "I don't need a doctor": "Something has been wrong for six months and I'm hoping it resolves itself",
+    "Let me just rest my eyes": "I will be unconscious in 90 seconds on this couch",
+    "I was going to mow the lawn": "I was absolutely not going to mow the lawn until you mentioned it",
+    "Back in my day": "I'm about to romanticize a time period that was objectively harder",
+    "I'm just going to the hardware store": "I'll be gone for three hours and come back with things we don't need",
   },
 
   senior: {
@@ -190,6 +238,18 @@ const menToWomenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I'm fine with whatever restaurant you want": "Somewhere with good lighting and chairs with backs",
     "I didn't say anything": "I've said what needed to be said over fifty years. This one I'm letting go.",
     "I'm not upset about that": "I've developed a very sophisticated acceptance of things I cannot change",
+    // Comedic tropes
+    "I'm going out with the boys": "I'm going to sit at the diner, drink decaf, and talk about our medications",
+    "I forgot": "I forgot three things today but I remember exactly where I was on July 4th, 1976",
+    "It's just a game": "It's the only thing keeping me from falling asleep at 6pm",
+    "I can fix that": "I fixed things like this in 1972 with duct tape and it's still holding",
+    "The thermostat is fine": "I've been cold since 2005 and this is the one thing I control",
+    "I'm not lost": "I've been driving this route since before GPS existed and I refuse to change",
+    "I don't need a doctor": "I've survived this long without one and I intend to keep my streak",
+    "Let me just rest my eyes": "Wake me for dinner or don't, I'll survive either way",
+    "Back in my day": "I'm about to tell a story you've heard forty times and I'm not sorry",
+    "Who's that actor": "I will spend the next two hours trying to remember instead of enjoying the movie",
+    "I'm just going for a drive": "I'm going to the hardware store to look at things I don't need and talk to strangers",
   },
 };
 
@@ -229,6 +289,15 @@ const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I'm not like other girls": "I have feelings and context that I hope you take seriously",
     "Can you just be on my side for once?": "I'm not asking for objectivity right now. I'm asking for loyalty.",
     "It's not a big deal": "It's a big deal and I need you to figure that out without me saying so",
+    // Comedic tropes
+    "I have nothing to wear": "I have 200 items and none of them match my mood",
+    "I saw the cutest thing today": "Prepare your wallet, I've already bought it",
+    "My friend's boyfriend does this": "This is a blueprint. Take notes.",
+    "I told my mom about us": "My entire family now has an opinion about you",
+    "I'm not being clingy": "I texted you 14 times because you left me on read for 7 minutes",
+    "Let's take a cute photo": "We're taking 47 photos until I find one I like",
+    "I had the weirdest dream about you": "In this dream you did something wrong and I woke up mad",
+    "Are you even listening to me?": "I just told you something important and you said 'that's crazy'",
   },
 
   "young-adult": {
@@ -267,6 +336,17 @@ const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
     "It's not a big deal": "It's part of a pattern and the pattern is a very big deal",
     "I'm happy for them": "I am genuinely happy for them and also slightly devastated for myself",
     "Do what you want": "I have expressed my preference clearly. This is your last chance.",
+    // Comedic tropes
+    "I have nothing to wear": "I have a full closet but nothing that matches my existential crisis",
+    "My friend's boyfriend does this": "Consider this a performance review with examples",
+    "I told my therapist about you": "She had thoughts. None of them were in your favor.",
+    "I'm not being clingy": "You haven't texted in two hours and I've written your eulogy",
+    "Let's just stay in": "I've already changed into sweatpants and this is non-negotiable",
+    "I saw this on TikTok": "We are now implementing this in our relationship immediately",
+    "I had a dream you cheated": "You need to apologize for something dream-you did",
+    "Are you even listening to me?": "You just said 'yeah totally' to something that required an actual response",
+    "I'm manifesting": "I'm wishing very hard for something and I need you to not ruin it with logic",
+    "We should do couples therapy": "I need a professional referee because you're not hearing me",
   },
 
   adult: {
@@ -305,6 +385,18 @@ const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
     "It's not a big deal": "In isolation it isn't. In context, it's everything.",
     "I'm happy for them": "I'm happy for them and working through some feelings of my own",
     "Do what you want": "This is me releasing control with visible reluctance and clear logs",
+    // Comedic tropes
+    "I have nothing to wear": "Every outfit has been documented on Instagram and cannot be repeated",
+    "My mother agrees with me": "I have assembled a coalition and you are outnumbered",
+    "I told my friends about this": "Seven women have weighed in and the verdict is unanimous",
+    "I'm not being passive aggressive": "I loaded the dishwasher very loudly and you should know why",
+    "Let's reorganize the closet": "I need to control something because everything else feels chaotic",
+    "I saw this on Pinterest": "We are remodeling the bathroom this weekend whether you like it or not",
+    "I had a dream about you": "Dream-you was perfect and real-you has some catching up to do",
+    "Are you listening?": "You just agreed to something you should have definitely questioned",
+    "I don't want to be like my mother": "I just did exactly what my mother would do and I need a moment",
+    "We need to have people over": "I've already invited them. This is a notification, not a discussion.",
+    "I'm fine, really": "I am the furthest thing from fine and 'really' is doing criminal amounts of work",
   },
 
   "middle-aged": {
@@ -343,6 +435,16 @@ const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
     "It's not a big deal": "We're both pretending that so we can get through the week",
     "I'm happy for them": "I'm genuinely happy for them and quietly recalibrating my own expectations",
     "Do what you want": "I've given my input multiple times. Whatever happens now is documented.",
+    // Comedic tropes
+    "I have nothing to wear": "Everything I own reminds me of a decade I'm trying to forget",
+    "My mother was right about you": "This is the nuclear option and I want you to know it's loaded",
+    "I told the book club about this": "Eight women and a bottle of wine have analyzed your behavior",
+    "I'm not being passive aggressive": "I alphabetized the spice rack at midnight. Draw your own conclusions.",
+    "The house is a mess": "I cleaned it three hours ago and somehow it looks like a crime scene again",
+    "I saw what the neighbors did": "We are now in a home improvement arms race",
+    "Remember when you said...": "I have a photographic memory for promises and a filing system for disappointments",
+    "I need a girls' weekend": "I need 48 hours of not being anyone's mother, wife, or employee",
+    "We should downsize": "I want to throw away your things while keeping all of mine",
   },
 
   senior: {
@@ -381,6 +483,16 @@ const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
     "It's not a big deal": "At this age you learn very quickly what actually is",
     "I'm happy for them": "I'm happy for them and grateful for what we have",
     "Do what you want": "I've given you my honest opinion. Now it's yours to carry.",
+    // Comedic tropes
+    "I have nothing to wear": "Everything fits differently now and I've made peace with elastic waistbands",
+    "My mother was right": "She told me this in 1974 and I'm just now admitting it",
+    "I told the ladies at church": "The entire congregation is praying for your behavior",
+    "Remember when you said...": "I have remembered every promise since our first date and yes, I keep score",
+    "The house is too quiet": "The kids left and I miss the chaos I spent thirty years complaining about",
+    "I saw what Mildred did": "Mildred got a new kitchen and now ours looks sad",
+    "I need my stories": "Do not speak to me between 1pm and 3pm. This is non-negotiable.",
+    "We should travel more": "I want to go somewhere warm and sit in a chair and not move",
+    "Call your children": "I already called them. I'm telling you to call them so they hear from both of us.",
   },
 };
 
@@ -401,9 +513,13 @@ export const suggestions: Record<Direction, string[]> = {
     "I'm not hungry",
     "I'll do it later",
     "It's not a big deal",
-    "I was listening",
-    "I'm not stressed",
-    "I didn't hear you",
+    "I'm going out with the boys",
+    "I can fix that",
+    "She's just a friend",
+    "Five more minutes",
+    "I'm on my way",
+    "The thermostat is fine",
+    "I'm not lost",
     "Never mind",
     "I'm not jealous",
   ],
@@ -418,10 +534,11 @@ export const suggestions: Record<Direction, string[]> = {
     "I'm not mad at you",
     "Never mind, forget it",
     "I'm just tired",
-    "I've been thinking",
-    "You never listen",
-    "I don't mind",
-    "Nothing happened",
+    "I have nothing to wear",
+    "My friend's boyfriend does this",
+    "I'm not being clingy",
+    "I had a dream about you",
+    "Are you even listening to me?",
     "I'm over it",
   ],
 };
