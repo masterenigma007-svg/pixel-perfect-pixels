@@ -161,9 +161,14 @@ export default function GenderTranslator() {
       setIsSpeaking(false);
       return;
     }
-    const utterance = new SpeechSynthesisUtterance(output);
-    utterance.rate = 0.95;
-    utterance.pitch = 1.0;
+    // Add dramatic pauses and emphasis for a more sarcastic, human delivery
+    const sarcText = output
+      .replace(/\.\.\./g, '... ... ')
+      .replace(/\?/g, '? ... ')
+      .replace(/!/g, '! ... ');
+    const utterance = new SpeechSynthesisUtterance(sarcText);
+    utterance.rate = 0.88;  // Slower, more deliberate — dripping with sarcasm
+    utterance.pitch = 0.92; // Slightly lower pitch for dry delivery
     const voice = getVoiceForDirection(direction);
     if (voice) utterance.voice = voice;
     utterance.onend = () => setIsSpeaking(false);
