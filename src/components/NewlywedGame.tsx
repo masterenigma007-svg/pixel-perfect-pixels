@@ -2,7 +2,13 @@ import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getRandomQuestions } from "@/data/newlywedQuestions";
 import type { NewlywedQuestion } from "@/data/newlywedQuestions";
-import { compareAnswers, MATCH_THRESHOLD } from "@/lib/answerSimilarity";
+import { compareAnswers, DIFFICULTY_THRESHOLDS, type Difficulty } from "@/lib/answerSimilarity";
+
+const DIFFICULTY_META: Record<Difficulty, { label: string; emoji: string; blurb: string }> = {
+  easy: { label: "Easy", emoji: "🌱", blurb: "50% similar = match. Forgiving — great for first-timers." },
+  medium: { label: "Medium", emoji: "🔥", blurb: "75% similar = match. The classic challenge." },
+  hard: { label: "Hard", emoji: "💎", blurb: "90% similar = match. Only soulmates need apply." },
+};
 
 const QUESTIONS_TOTAL = 6;
 const MAX_ANSWER_LEN = 140;
@@ -31,11 +37,15 @@ export default function NewlywedGame() {
   const [gameState, setGameState] = useState<GameState>("setup");
   const [player1Name, setPlayer1Name] = useState("");
   const [player2Name, setPlayer2Name] = useState("");
+  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [questions, setQuestions] = useState<NewlywedQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [p1Answer, setP1Answer] = useState("");
   const [p2Answer, setP2Answer] = useState("");
   const [results, setResults] = useState<RoundResult[]>([]);
+
+  const threshold = DIFFICULTY_THRESHOLDS[difficulty];
+  const thresholdPct = Math.round(threshold * 100);
 
   const startGame = useCallback(() => {
     setQuestions(getRandomQuestions(QUESTIONS_TOTAL));
@@ -57,7 +67,7 @@ export default function NewlywedGame() {
 
   const submitP2 = () => {
     if (!p2Answer.trim() || !q) return;
-    const sim = compareAnswers(p1Answer, p2Answer);
+    const sim = compareAnswers(p1Answer, p2Answer, threshold);
     setResults((prev) => [
       ...prev,
       {
@@ -92,7 +102,7 @@ export default function NewlywedGame() {
   const accuracy = results.length
     ? Math.round((results.reduce((s, r) => s + r.score, 0) / results.length) * 100)
     : 0;
-  const passedThreshold = accuracy >= Math.round(MATCH_THRESHOLD * 100);
+  const passedThreshold = accuracy >= thresholdPct;
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -111,7 +121,7 @@ export default function NewlywedGame() {
             animate={{ opacity: 1, transition: { delay: 0.2 } }}
             className="text-muted-foreground text-sm mt-2 italic"
           >
-            Both partners answer. 75%+ similar = you really know each other.
+            Both partners answer. Match adjectives = you really know each other.
           </motion.p>
         </header>
 
@@ -138,7 +148,7 @@ export default function NewlywedGame() {
                   <h2 className="text-xl font-bold text-foreground">Enter Your Names</h2>
                   <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mx-auto">
                     For each question, <em>both of you</em> type your honest answer.
-                    We compare them — adjectives matter most. 75%+ similar = match!
+                    We compare them — adjectives matter most. Pick a difficulty below!
                   </p>
 
                   <div className="space-y-4 text-left">
@@ -168,9 +178,43 @@ export default function NewlywedGame() {
                     </div>
                   </div>
 
+                  {/* Difficulty selector */}
+                  <div className="text-left">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                      🎚️ Difficulty
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(Object.keys(DIFFICULTY_META) as Difficulty[]).map((d) => {
+                        const meta = DIFFICULTY_META[d];
+                        const active = difficulty === d;
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => setDifficulty(d)}
+                            className={`px-2 py-2.5 rounded-xl border-2 text-xs font-bold transition-all ${
+                              active
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-border bg-muted text-muted-foreground hover:border-primary/50"
+                            }`}
+                          >
+                            <div className="text-base">{meta.emoji}</div>
+                            <div>{meta.label}</div>
+                            <div className="text-[10px] opacity-70 font-normal mt-0.5">
+                              {Math.round(DIFFICULTY_THRESHOLDS[d] * 100)}%
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground italic mt-2 text-center">
+                      {DIFFICULTY_META[difficulty].blurb}
+                    </p>
+                  </div>
+
                   <div className="space-y-2 text-left bg-muted rounded-xl p-4 text-sm text-muted-foreground">
                     <p>✍️ Both players type their own answer</p>
-                    <p>🎯 75%+ similarity = match (point)</p>
+                    <p>🎯 {thresholdPct}%+ similarity = match (point)</p>
                     <p>🧠 Adjectives are weighted heaviest</p>
                     <p>📝 {QUESTIONS_TOTAL} questions total</p>
                   </div>
@@ -348,7 +392,7 @@ export default function NewlywedGame() {
                       <p className="text-xs text-muted-foreground mb-1">Similarity</p>
                       <p className="text-3xl font-bold text-foreground">{pct}%</p>
                       <p className="text-sm font-bold mt-1" style={{ color: r.isMatch ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))" }}>
-                        {r.isMatch ? "🎯 Match! +1 point" : "😬 Not quite (need 75%)"}
+                        {r.isMatch ? "🎯 Match! +1 point" : `😬 Not quite (need ${thresholdPct}%)`}
                       </p>
                     </motion.div>
 
@@ -392,8 +436,8 @@ export default function NewlywedGame() {
                     </h2>
                     <p className="text-sm text-muted-foreground italic">
                       {passedThreshold
-                        ? `You hit ${accuracy}% — above the 75% 'soulmate' threshold.`
-                        : `You scored ${accuracy}%. The 75% threshold is the goal — try again!`}
+                        ? `You hit ${accuracy}% — above the ${thresholdPct}% ${DIFFICULTY_META[difficulty].label} threshold.`
+                        : `You scored ${accuracy}%. The ${thresholdPct}% (${DIFFICULTY_META[difficulty].label}) threshold is the goal — try again!`}
                     </p>
                   </div>
 
@@ -405,7 +449,7 @@ export default function NewlywedGame() {
                     </div>
                     <div className="text-center p-4 rounded-xl border-2 border-border bg-muted">
                       <p className="text-3xl font-bold text-foreground">{matches}/{results.length}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Matches (≥75%)</p>
+                      <p className="text-xs text-muted-foreground mt-1">Matches (≥{thresholdPct}%)</p>
                     </div>
                   </div>
 
