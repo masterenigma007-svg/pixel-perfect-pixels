@@ -2,8 +2,9 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import GenderTranslator from "@/components/GenderTranslator";
 import NewlywedGame from "@/components/NewlywedGame";
+import TruthOrDare from "@/components/TruthOrDare";
 
-type Tab = "translator" | "game";
+type Tab = "translator" | "game" | "tod";
 
 const Index = () => {
   const [tab, setTab] = useState<Tab>("translator");
@@ -14,13 +15,14 @@ const Index = () => {
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-lg mx-auto flex">
           {([
-            { id: "translator" as Tab, label: "🗣️ Translator", emoji: "🗣️" },
-            { id: "game" as Tab, label: "💍 Newlywed Game", emoji: "💍" },
+            { id: "translator" as Tab, label: "🗣️ Translator" },
+            { id: "game" as Tab, label: "💍 Newlywed" },
+            { id: "tod" as Tab, label: "🔥 Truth/Dare" },
           ]).map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`relative flex-1 py-3.5 text-sm font-bold transition-colors ${
+              className={`relative flex-1 py-3.5 text-xs sm:text-sm font-bold transition-colors ${
                 tab === t.id ? "text-primary" : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -37,7 +39,9 @@ const Index = () => {
       </div>
 
       {/* Content */}
-      {tab === "translator" ? <GenderTranslator /> : <NewlywedGame />}
+      {tab === "translator" && <GenderTranslator />}
+      {tab === "game" && <NewlywedGame />}
+      {tab === "tod" && <TruthOrDare />}
     </div>
   );
 };
