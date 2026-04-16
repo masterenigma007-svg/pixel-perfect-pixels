@@ -18,6 +18,13 @@ interface VoiceProfile {
   volume: number;
 }
 
+interface SpokenChunk {
+  text: string;
+  rate: number;
+  pitch: number;
+  pauseMs: number;
+}
+
 const FEMALE_NAMES = [
   "google uk english female",
   "microsoft libby", "microsoft sonia", "microsoft hollie", "microsoft maisie",
@@ -93,23 +100,130 @@ function isBritishFemaleVoice(voice: SpeechSynthesisVoice): boolean {
 }
 
 /**
- * Inserts subtle natural pauses and breath cues so the female TTS voice reads
- * with a more human cadence — short pauses after commas, longer after sentence
- * endings, and a tiny lilt before conjunctions.
+ * Breaks the text into smaller spoken phrases with slight prosody changes so
+ * the browser TTS sounds less flat and robotic.
  */
-function humanizeFemaleCadence(text: string): string {
-  return text
-    // Slight breath after sentence endings.
-    .replace(/([.!?])\s+/g, "$1… ")
-    // Brief pause after commas, semicolons, colons.
-    .replace(/([,;:])\s+/g, "$1, ")
-    // Soften em-dashes into a spoken pause.
-    .replace(/\s—\s/g, ", … ")
-    // Tiny lift before common conjunctions to break monotone delivery.
-    .replace(/\b(and|but|so|because|though|although)\b/gi, ", $1")
-    // Collapse any accidental double spaces.
-    .replace(/\s{2,}/g, " ")
-    .trim();
+function buildHumanFemaleChunks(text: string, profile: VoiceProfile): SpokenChunk[] {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return [];
+
+  const segments = normalized.match(/[^,;:.!?—…]+(?:[,;:.!?—…]+)?/g) ?? [normalized];
+
+  return segments
+    .map((segment, index) => {
+      const trimmed = segment.trim();
+      const punctuation = trimmed.match(/[,;:.!?—…]+$/)?.[0] ?? "";
+      const spokenText = trimmed.replace(/[,;:.!?—…]+$/, "").trim();
+      if (!spokenText) return null;
+
+      const wordCount = spokenText.split(/\s+/).length;
+      const isLongClause = wordCount >= 9;
+      const cadenceOffset = index % 2 === 0 ? -0.01 : 0.015;
+
+      const rateDelta = punctuation.includes("?")
+        ? 0.02
+        : punctuation.includes("!")
+          ? 0.015
+          : punctuation
+            ? -0.015
+            : 0;
+
+      const pitchDelta = punctuation.includes("?")
+        ? 0.025
+        : punctuation.includes("!")
+          ? 0.015
+          : index % 3 === 0
+            ? 0.01
+            : -0.005;
+
+      const pauseMs = punctuation.includes(".") || punctuation.includes("!") || punctuation.includes("?") || punctuation.includes("…")
+        ? 180
+        : punctuation
+          ? 95
+          : 40;
+
+      return {
+        text: spokenText,
+        rate: Math.min(1.04, Math.max(0.9, profile.rate + cadenceOffset + rateDelta - (isLongClause ? 0.015 : 0))),
+        pitch: Math.min(1.08, Math.max(0.94, profile.pitch + pitchDelta)),
+        pauseMs,
+      } satisfies SpokenChunk;
+    })
+    .filter((chunk): chunk is SpokenChunk => Boolean(chunk));
+}
+
+function speakWithHumanFemaleCadence(
+  options: BrowserSpeakOptions & { profile: VoiceProfile; voice: SpeechSynthesisVoice | null }
+): SpeechPlaybackHandle | null {
+  const { text, profile, voice, onStart, onEnd, onError } = options;
+  const chunks = buildHumanFemaleChunks(text, profile);
+  if (!chunks.length) return null;
+
+  let stopped = false;
+  let started = false;
+  let pauseTimer: number | null = null;
+
+  const speakChunk = (index: number) => {
+    if (stopped) return;
+
+    const chunk = chunks[index];
+    if (!chunk) {
+      onEnd?.();
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(chunk.text);
+    utterance.volume = profile.volume;
+    utterance.rate = chunk.rate;
+    utterance.pitch = chunk.pitch;
+
+    if (voice) {
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+    } else {
+      utterance.lang = "en-GB";
+    }
+
+    utterance.onstart = () => {
+      if (!stopped && !started) {
+        started = true;
+        onStart?.();
+      }
+    };
+
+    utterance.onend = () => {
+      if (stopped) return;
+
+      if (index === chunks.length - 1) {
+        onEnd?.();
+        return;
+      }
+
+      pauseTimer = window.setTimeout(() => {
+        pauseTimer = null;
+        speakChunk(index + 1);
+      }, chunk.pauseMs);
+    };
+
+    utterance.onerror = (event) => {
+      if (!stopped) onError?.(event);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  speakChunk(0);
+
+  return {
+    stop: () => {
+      stopped = true;
+      if (pauseTimer !== null) {
+        window.clearTimeout(pauseTimer);
+        pauseTimer = null;
+      }
+      window.speechSynthesis.cancel();
+    },
+  };
 }
 
 function scoreVoice(voice: SpeechSynthesisVoice, direction: Direction, targetNames: string[]): number {
@@ -179,8 +293,8 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
 function getSarcasticProfile(direction: Direction, voice: SpeechSynthesisVoice | null): VoiceProfile {
   if (direction === "menToWomen") {
     return isNeuralVoice(voice as SpeechSynthesisVoice)
-      ? { rate: 1.0, pitch: 1.0, volume: 1.0 }
-      : { rate: 1.02, pitch: 1.05, volume: 1.0 };
+      ? { rate: 0.97, pitch: 0.99, volume: 1.0 }
+      : { rate: 0.98, pitch: 1.01, volume: 1.0 };
   }
 
   return { rate: 0.9, pitch: 1.05, volume: 1.0 };
@@ -192,8 +306,20 @@ export function speakWithBrowserTts(options: BrowserSpeakOptions): SpeechPlaybac
 
   const voice = selectVoice(direction);
   const profile = getSarcasticProfile(direction, voice);
-  const spokenText = direction === "menToWomen" ? humanizeFemaleCadence(text) : text;
-  const utterance = new SpeechSynthesisUtterance(spokenText);
+
+  if (direction === "menToWomen") {
+    return speakWithHumanFemaleCadence({
+      text,
+      direction,
+      voice,
+      profile,
+      onStart,
+      onEnd,
+      onError,
+    });
+  }
+
+  const utterance = new SpeechSynthesisUtterance(text);
 
   let stopped = false;
 
