@@ -33,26 +33,11 @@ export function speakSarcastic(options: SpeakOptions): void {
     callback?.();
   };
 
-  if (direction === "menToWomen") {
-    speakWithServerFemaleVoice({
-      text: processedText,
-      onStart,
-      onEnd: () => finalizePlayback(onEnd),
-      onError: (error) => finalizePlayback(() => onError?.(error)),
-    }).then((handle) => {
-      if (sessionId !== playbackSessionId) {
-        handle?.stop();
-        return;
-      }
-      if (handle) {
-        activePlayback = handle;
-      } else {
-        finalizePlayback(() => onError?.(new Error("Female voice playback failed")));
-      }
-    });
-    return;
-  }
-
+  // Female voice now uses the device's built-in TTS engine (same as male).
+  // This delivers genuinely human voices on iOS (Samantha/Siri), Android,
+  // macOS, and Windows 11 (Aria/Jenny Neural) — for free, with no server,
+  // no API keys, no billing. The browserSarcasticTts engine picks the best
+  // available female voice and applies the sarcastic prosody profile.
   activePlayback = speakWithBrowserTts({
     text: processedText,
     direction,
