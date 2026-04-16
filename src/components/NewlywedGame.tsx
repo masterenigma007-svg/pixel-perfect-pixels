@@ -178,9 +178,43 @@ export default function NewlywedGame() {
                     </div>
                   </div>
 
+                  {/* Difficulty selector */}
+                  <div className="text-left">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                      🎚️ Difficulty
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(Object.keys(DIFFICULTY_META) as Difficulty[]).map((d) => {
+                        const meta = DIFFICULTY_META[d];
+                        const active = difficulty === d;
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => setDifficulty(d)}
+                            className={`px-2 py-2.5 rounded-xl border-2 text-xs font-bold transition-all ${
+                              active
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-border bg-muted text-muted-foreground hover:border-primary/50"
+                            }`}
+                          >
+                            <div className="text-base">{meta.emoji}</div>
+                            <div>{meta.label}</div>
+                            <div className="text-[10px] opacity-70 font-normal mt-0.5">
+                              {Math.round(DIFFICULTY_THRESHOLDS[d] * 100)}%
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground italic mt-2 text-center">
+                      {DIFFICULTY_META[difficulty].blurb}
+                    </p>
+                  </div>
+
                   <div className="space-y-2 text-left bg-muted rounded-xl p-4 text-sm text-muted-foreground">
                     <p>✍️ Both players type their own answer</p>
-                    <p>🎯 75%+ similarity = match (point)</p>
+                    <p>🎯 {thresholdPct}%+ similarity = match (point)</p>
                     <p>🧠 Adjectives are weighted heaviest</p>
                     <p>📝 {QUESTIONS_TOTAL} questions total</p>
                   </div>
