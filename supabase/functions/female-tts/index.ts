@@ -55,7 +55,11 @@ function chunkText(text: string): string[] {
 
 async function fetchElevenLabs(text: string): Promise<Uint8Array | null> {
   const apiKey = Deno.env.get("ELEVENLABS_API_KEY");
-  if (!apiKey) return null;
+  console.log(`[female-tts] ElevenLabs key present: ${!!apiKey}, len: ${apiKey?.length ?? 0}`);
+  if (!apiKey) {
+    console.warn("[female-tts] ELEVENLABS_API_KEY missing — using Google fallback");
+    return null;
+  }
 
   try {
     const res = await fetch(
@@ -82,15 +86,19 @@ async function fetchElevenLabs(text: string): Promise<Uint8Array | null> {
       }
     );
 
+    console.log(`[female-tts] ElevenLabs response status: ${res.status}`);
+
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
-      console.warn(`ElevenLabs failed [${res.status}]: ${errText}`);
+      console.warn(`[female-tts] ElevenLabs failed [${res.status}]: ${errText}`);
       return null;
     }
 
-    return new Uint8Array(await res.arrayBuffer());
+    const buf = new Uint8Array(await res.arrayBuffer());
+    console.log(`[female-tts] ElevenLabs returned ${buf.length} bytes`);
+    return buf;
   } catch (err) {
-    console.warn("ElevenLabs request error:", err);
+    console.warn("[female-tts] ElevenLabs request error:", err);
     return null;
   }
 }
