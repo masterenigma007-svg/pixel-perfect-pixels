@@ -29,8 +29,11 @@ const FEMALE_NAMES = [
 
 const PREMIUM_FEMALE_NAMES = [
   "google uk english female",
+  "microsoft libby online", "microsoft sonia online", "microsoft hollie online",
   "microsoft libby", "microsoft sonia", "microsoft hollie",
-  "microsoft aria", "microsoft jenny", "serena", "kate",
+  "microsoft aria online", "microsoft jenny online",
+  "microsoft aria", "microsoft jenny",
+  "serena", "kate",
 ];
 
 const BRITISH_FEMALE_NAMES = [
@@ -57,6 +60,8 @@ const PREMIUM_KEYWORDS = [
   "natural", "neural", "online", "premium", "enhanced", "google", "siri",
 ];
 
+const NEURAL_KEYWORDS = ["neural", "natural", "online", "premium", "enhanced"];
+
 const ROBOTIC_KEYWORDS = [
   "espeak", "compact", "synth", "festival", "classic", "old", "legacy",
 ];
@@ -77,14 +82,17 @@ function scoreVoice(voice: SpeechSynthesisVoice, direction: Direction, targetNam
     if (lang.startsWith("en-gb") || lang.startsWith("en-uk")) score += 14;
     if (BRITISH_MALE_NAMES.some((target) => name.includes(target))) score += 10;
   } else if (preferBritishFemale) {
-    // Strongly prefer British English female voices
-    if (lang.startsWith("en-gb") || lang.startsWith("en-uk")) score += 24;
-    else if (lang.startsWith("en-au") || lang.startsWith("en-ie")) score += 6;
-    else if (lang.startsWith("en")) score -= 8; // discourage US accents
-    if (BRITISH_FEMALE_NAMES.some((target) => name.includes(target))) score += 18;
-    if (PREMIUM_FEMALE_NAMES.some((target) => name.includes(target))) score += 8;
-    // Online/neural variants are dramatically more human
-    if (name.includes("online") || name.includes("neural") || name.includes("natural")) score += 10;
+    // Strongly prefer British English female voices, then neural quality.
+    if (lang.startsWith("en-gb") || lang.startsWith("en-uk")) score += 28;
+    else if (lang.startsWith("en-au") || lang.startsWith("en-ie")) score += 8;
+    else if (lang.startsWith("en")) score -= 10; // discourage US accents
+    if (BRITISH_FEMALE_NAMES.some((target) => name.includes(target))) score += 22;
+    if (PREMIUM_FEMALE_NAMES.some((target) => name.includes(target))) score += 10;
+    // Neural / online variants are dramatically more human-sounding.
+    if (NEURAL_KEYWORDS.some((keyword) => name.includes(keyword))) score += 16;
+    // Local non-neural voices on desktop OSes tend to sound robotic — slight penalty
+    // unless they are one of the known good British names above.
+    if (voice.localService && !NEURAL_KEYWORDS.some((k) => name.includes(k))) score -= 4;
   } else {
     if (PREMIUM_FEMALE_NAMES.some((target) => name.includes(target))) score += 12;
     if (lang.startsWith("en-us") || lang.startsWith("en-gb")) score += 3;
@@ -116,8 +124,9 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
 
 function getSarcasticProfile(direction: Direction): VoiceProfile {
   if (direction === "menToWomen") {
-    // Natural British female cadence — closer to human speech, less synthetic edge.
-    return { rate: 0.95, pitch: 1.0, volume: 1.0 };
+    // Natural British female cadence — slower, lower pitch reduces synthetic edge
+    // and adds the dry sarcastic delivery the app is known for.
+    return { rate: 0.88, pitch: 0.92, volume: 1.0 };
   }
 
   return { rate: 0.9, pitch: 1.05, volume: 1.0 };
