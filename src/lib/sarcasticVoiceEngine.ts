@@ -117,13 +117,17 @@ function getSarcasticProfile(direction: Direction): VoiceProfile {
   if (direction === "menToWomen") {
     return { rate: 0.92, pitch: 1.12, volume: 1.0 };
   }
-  // Male: British-leaning, smoother and a touch slower for character without sounding synthetic.
-  return { rate: 0.94, pitch: 0.98, volume: 1.0 };
+  // Male British-leaning sarcastic delivery:
+  // - rate 0.9 = unhurried, dry
+  // - pitch 1.05 sits just above the engine's lowest register (which always
+  //   sounds robotic) so it reads as a natural baritone, not synthesized bass.
+  return { rate: 0.9, pitch: 1.05, volume: 1.0 };
 }
 
 /**
- * Split into natural clauses for prosody variation.
- * Male voice uses a single utterance to avoid the choppy, robotic reset between chunks.
+ * Split into natural clauses. The male voice keeps the full sentence as a
+ * single utterance — punctuation is preserved so the engine generates real
+ * intonation and pauses instead of monotone speech.
  */
 function chunkForProsody(text: string, direction: Direction): string[] {
   if (direction === "womenToMen") {
