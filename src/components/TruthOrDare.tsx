@@ -10,7 +10,7 @@ export default function TruthOrDare() {
   const [p1, setP1] = useState("");
   const [p2, setP2] = useState("");
   const [age, setAge] = useState<number>(25);
-  const [turn, setTurn] = useState(0); // 0 = p1, 1 = p2
+  const [turn, setTurn] = useState(0);
   const [current, setCurrent] = useState<{ kind: "Truth" | "Dare"; prompt: TodPrompt } | null>(null);
 
   const names = [p1.trim() || "Player 1", p2.trim() || "Player 2"];
@@ -33,9 +33,6 @@ export default function TruthOrDare() {
     setCurrent(null);
     setStage("choose");
   };
-
-  const ageLabel =
-    age < 21 ? "😇 Light" : age < 30 ? "😊 Sweet" : age < 50 ? "💞 Deeper" : "🌟 Reflective";
 
   return (
     <div className="max-w-lg mx-auto p-4 sm:p-6">
@@ -74,7 +71,7 @@ export default function TruthOrDare() {
               <div className="flex items-baseline justify-between">
                 <p className="text-sm font-semibold text-foreground">Age</p>
                 <p className="text-sm text-muted-foreground">
-                  <span className="font-bold text-primary">{age}</span> · {ageLabel}
+                  <span className="font-bold text-primary">{age}</span>
                 </p>
               </div>
               <Slider
@@ -82,12 +79,10 @@ export default function TruthOrDare() {
                 max={80}
                 step={1}
                 value={[age]}
-                onValueChange={(v) => setAge(v[0])}
+                onValueChange={(value) => setAge(value[0] ?? 18)}
                 className="py-2"
               />
-              <p className="text-xs text-muted-foreground">
-                All prompts stay PG-13. Higher ages unlock more reflective questions.
-              </p>
+              <p className="text-xs text-muted-foreground">Age range: 18 to 80. All prompts stay PG-13.</p>
             </div>
 
             <button
@@ -108,9 +103,7 @@ export default function TruthOrDare() {
             className="space-y-6"
           >
             <div className="text-center space-y-1">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">
-                {ageLabel} · age {age}
-              </p>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">Age {age}</p>
               <p className="text-sm text-muted-foreground">It's your turn</p>
               <h2 className="text-3xl font-black text-foreground">{currentName}</h2>
             </div>
@@ -148,9 +141,7 @@ export default function TruthOrDare() {
             className="space-y-6"
           >
             <div className="text-center space-y-1">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">
-                {currentName} chose
-              </p>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">{currentName} chose</p>
               <h2
                 className={`text-3xl font-black ${
                   current.kind === "Truth" ? "text-primary" : "text-secondary"
