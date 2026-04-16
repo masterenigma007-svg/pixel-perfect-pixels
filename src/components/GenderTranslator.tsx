@@ -325,13 +325,13 @@ export default function GenderTranslator() {
               <button
                 onClick={handleMic}
                 title={isRecording ? "Stop recording" : "Record speech"}
-                className={`w-11 h-11 rounded-full flex items-center justify-center text-lg transition-all ${
+                className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${
                   isRecording
                     ? "bg-primary text-primary-foreground animate-pulse shadow-lg"
                     : "bg-secondary text-secondary-foreground hover:opacity-90 hover:scale-105"
                 }`}
               >
-                <img src={micIcon} alt="Microphone" className="w-7 h-7 object-contain" />
+                <img src={micIcon} alt="Microphone" className="w-11 h-11 object-contain" />
               </button>
 
               <motion.button
@@ -346,13 +346,13 @@ export default function GenderTranslator() {
               <button
                 onClick={handleSpeak}
                 title={isSpeaking ? "Stop speaking" : "Hear translation"}
-                className={`w-11 h-11 rounded-full flex items-center justify-center text-lg transition-all ${
+                className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${
                   isSpeaking
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary text-secondary-foreground hover:opacity-90 hover:scale-105"
                 }`}
               >
-                {isSpeaking ? <span className="text-base leading-none">■</span> : <img src={speakerIcon} alt="Speaker" className="w-7 h-7 object-contain" />}
+                {isSpeaking ? <span className="text-2xl leading-none">■</span> : <img src={speakerIcon} alt="Speaker" className="w-11 h-11 object-contain" />}
               </button>
 
               <button
