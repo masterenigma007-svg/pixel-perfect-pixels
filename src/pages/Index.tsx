@@ -5,7 +5,7 @@ import GenderTranslator from "@/components/GenderTranslator";
 import NewlywedGame from "@/components/NewlywedGame";
 import TruthOrDare from "@/components/TruthOrDare";
 import translatorIcon from "@/assets/translator-hero.jpg";
-import newlywedIcon from "@/assets/newlywed-hero.jpg";
+import newlywedIcon from "@/assets/compatibility-hero.jpg";
 import truthOrDareIcon from "@/assets/truthordare-hero.jpg";
 
 type Tab = "translator" | "game" | "tod";
@@ -15,7 +15,7 @@ const Index = () => {
 
   const tabs: { id: Tab; label: string; icon: string; animated?: boolean }[] = [
     { id: "translator", label: "Translator", icon: translatorIcon },
-    { id: "game", label: "Newlywed", icon: newlywedIcon },
+    { id: "game", label: "Compatibility", icon: newlywedIcon },
     { id: "tod", label: "Truth/Dare", icon: truthOrDareIcon, animated: true },
   ];
 
