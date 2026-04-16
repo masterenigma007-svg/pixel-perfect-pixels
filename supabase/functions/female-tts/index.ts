@@ -145,37 +145,68 @@ async function fetchElevenLabs(text: string): Promise<Uint8Array | null> {
   }
 }
 
-// ── StreamElements TTS (FREE, no key, real neural voices) ────
-// Uses Amazon Polly voices via StreamElements' public endpoint.
-// "Joanna" = warm, natural American female (Polly Neural).
-async function fetchStreamElementsTts(text: string): Promise<Uint8Array | null> {
+// ── VoiceRSS (FREE demo key, no signup, real human voices) ────
+// "Linda" = warm American female. Limit ~350 chars per call on demo key,
+// so we chunk and concatenate.
+const VOICERSS_MAX = 300;
+
+function chunkForVoiceRss(text: string): string[] {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (!clean) return [];
+  if (clean.length <= VOICERSS_MAX) return [clean];
+  const parts: string[] = [];
+  const sentences = clean.match(/[^.!?]+[.!?]?/g) ?? [clean];
+  let current = "";
+  for (const s of sentences) {
+    const t = s.trim();
+    if (!t) continue;
+    if ((current + " " + t).trim().length <= VOICERSS_MAX) {
+      current = (current ? current + " " : "") + t;
+    } else {
+      if (current) parts.push(current);
+      current = t.length <= VOICERSS_MAX ? t : t.slice(0, VOICERSS_MAX);
+    }
+  }
+  if (current) parts.push(current);
+  return parts;
+}
+
+async function fetchVoiceRssChunk(text: string): Promise<Uint8Array | null> {
   try {
     const url =
-      "https://api.streamelements.com/kappa/v2/speech?voice=Joanna&text=" +
+      "https://api.voicerss.org/?key=demo&hl=en-us&v=Linda&c=MP3&f=44khz_16bit_stereo&r=-2&src=" +
       encodeURIComponent(text);
     const res = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
-          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept: "audio/mpeg, */*",
-      },
+      headers: { Accept: "audio/mpeg, */*" },
     });
     if (!res.ok) {
-      const errText = await res.text();
-      console.warn(`[female-tts] StreamElements ${res.status}: ${errText}`);
+      console.warn(`[female-tts] VoiceRSS ${res.status}`);
       return null;
     }
     const buf = new Uint8Array(await res.arrayBuffer());
+    // VoiceRSS returns text errors with 200 status sometimes
     if (buf.length < 500) {
-      console.warn(`[female-tts] StreamElements returned suspiciously small payload: ${buf.length} bytes`);
+      const txt = new TextDecoder().decode(buf);
+      console.warn(`[female-tts] VoiceRSS suspicious payload: ${txt}`);
       return null;
     }
     return buf;
   } catch (err) {
-    console.warn("[female-tts] StreamElements exception:", err);
+    console.warn("[female-tts] VoiceRSS exception:", err);
     return null;
   }
+}
+
+async function fetchVoiceRss(text: string): Promise<Uint8Array | null> {
+  const chunks = chunkForVoiceRss(text);
+  if (!chunks.length) return null;
+  const buffers: Uint8Array[] = [];
+  for (const c of chunks) {
+    const buf = await fetchVoiceRssChunk(c);
+    if (!buf) return null;
+    buffers.push(buf);
+  }
+  return concat(buffers);
 }
 
 // ── Google fallback ───────────────────────────────────────────
