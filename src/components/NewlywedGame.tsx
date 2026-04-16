@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getRandomQuestions } from "@/data/newlywedQuestions";
 import type { NewlywedQuestion } from "@/data/newlywedQuestions";
+import newlywedHero from "@/assets/newlywed-hero.jpg";
 
 const QUESTIONS_PER_PLAYER = 5;
 
@@ -117,6 +118,15 @@ export default function NewlywedGame() {
           style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.60)" }}
         >
           <div className="h-1.5 bg-gradient-to-r from-primary to-secondary" />
+
+          <img
+            src={newlywedHero}
+            alt="Interlocking gold wedding rings"
+            loading="lazy"
+            width={1024}
+            height={512}
+            className="w-full h-32 sm:h-40 object-cover"
+          />
 
           <div className="p-6">
             <AnimatePresence mode="wait">
