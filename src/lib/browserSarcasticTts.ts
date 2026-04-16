@@ -19,16 +19,24 @@ interface VoiceProfile {
 }
 
 const FEMALE_NAMES = [
-  "google uk english female", "google us english",
+  "google uk english female",
+  "microsoft libby", "microsoft sonia", "microsoft hollie", "microsoft maisie",
   "microsoft aria", "microsoft jenny", "microsoft ava", "microsoft emma",
   "microsoft michelle", "microsoft zira",
-  "samantha", "victoria", "karen", "tessa", "fiona", "moira",
-  "alice", "hazel", "susan", "serena", "allison", "ava", "emma", "aria",
+  "kate", "serena", "fiona", "moira", "tessa", "karen", "victoria",
+  "samantha", "alice", "hazel", "susan", "allison", "ava", "emma", "aria",
 ];
 
 const PREMIUM_FEMALE_NAMES = [
-  "google uk english female", "microsoft aria", "microsoft jenny",
-  "microsoft ava", "microsoft emma", "samantha", "serena", "allison",
+  "google uk english female",
+  "microsoft libby", "microsoft sonia", "microsoft hollie",
+  "microsoft aria", "microsoft jenny", "serena", "kate",
+];
+
+const BRITISH_FEMALE_NAMES = [
+  "google uk english female",
+  "microsoft libby", "microsoft sonia", "microsoft hollie", "microsoft maisie",
+  "kate", "serena", "fiona", "hazel", "susan",
 ];
 
 const MALE_NAMES = [
