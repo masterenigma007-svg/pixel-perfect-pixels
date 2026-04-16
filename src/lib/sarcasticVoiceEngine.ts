@@ -19,13 +19,17 @@ const FEMALE_NAMES = [
 ];
 
 const MALE_NAMES = [
-  "microsoft david", "microsoft mark", "google uk english male",
+  "microsoft david", "microsoft mark", "google uk english male", "male",
   "daniel", "alex", "tom", "james", "david", "mark", "fred",
   "guy", "reed", "aaron", "arthur", "oliver", "brian",
 ];
 
 const PREMIUM_KEYWORDS = [
   "natural", "neural", "online", "premium", "enhanced", "google", "siri",
+];
+
+const ROBOTIC_KEYWORDS = [
+  "espeak", "compact", "synth", "festival", "classic", "old", "legacy",
 ];
 
 function scoreVoice(voice: SpeechSynthesisVoice, targetNames: string[]): number {
@@ -35,6 +39,8 @@ function scoreVoice(voice: SpeechSynthesisVoice, targetNames: string[]): number 
   if (PREMIUM_KEYWORDS.some((k) => name.includes(k))) score += 5;
   if (voice.localService) score += 2;
   if (voice.default) score += 1;
+  if (voice.lang.toLowerCase().startsWith("en-us")) score += 2;
+  if (ROBOTIC_KEYWORDS.some((k) => name.includes(k))) score -= 12;
   return score;
 }
 
@@ -61,14 +67,24 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
 // ─── Sarcastic Text Processing ───────────────────────────────────
 
 /**
+ * If the UI output contains a generic wrapper like:
+ *   "original phrase" — Translation: actual translation
+ * only the actual translation should be spoken.
+ */
+function extractSpokenText(text: string): string {
+  const match = text.match(/[—-]\s*Translation\s*:\s*(.+)$/i);
+  return match?.[1]?.trim() || text.trim();
+}
+
+/**
  * Cleans text for TTS without altering wording.
- * - Strips characters some engines vocalize (asterisks, brackets, etc.)
+ * - Strips characters some engines vocalize (asterisks, brackets, quotes, etc.)
  * - Normalizes whitespace
- * - Does NOT add or change any words — the translation is spoken verbatim.
+ * - Does NOT add or change any words — only the translation is spoken.
  */
 function applySarcasticProsody(text: string): string {
   return text
-    .replace(/[*_`~<>[\](){}]/g, "")
+    .replace(/["'“”‘’*_`~<>[\](){}]/g, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 }
@@ -83,36 +99,22 @@ interface VoiceProfile {
 
 function getSarcasticProfile(direction: Direction): VoiceProfile {
   if (direction === "menToWomen") {
-    // Female: lifted pitch, measured pace
     return { rate: 0.92, pitch: 1.12, volume: 1.0 };
   }
-  // Male: natural lower register — NOT too low (was 0.78 → robotic)
-  return { rate: 0.95, pitch: 0.95, volume: 1.0 };
+  // Male: keep it human and steady; avoid the lower/jittery robotic sound.
+  return { rate: 0.98, pitch: 1.0, volume: 1.0 };
 }
 
 /**
- * Split into natural clauses for prosody variation. Punctuation is REMOVED
- * from the spoken text (kept only as a split marker) so it never gets read aloud.
- * Pauses are added between chunks via setTimeout instead.
+ * Split into natural clauses for prosody variation.
+ * Chunks are queued immediately within the original user gesture so browsers
+ * do not treat later speech calls as detached async playback.
  */
-function chunkForProsody(text: string): { text: string; pauseAfterMs: number }[] {
-  // Split on punctuation but keep delimiters so we know how long to pause
-  const parts = text.split(/([.!?,;:]+)/);
-  const chunks: { text: string; pauseAfterMs: number }[] = [];
-
-  for (let i = 0; i < parts.length; i += 2) {
-    const phrase = (parts[i] ?? "").trim();
-    const punct = parts[i + 1] ?? "";
-    if (!phrase) continue;
-
-    let pause = 80;
-    if (/[.!?]/.test(punct)) pause = 320;
-    else if (/[,;:]/.test(punct)) pause = 180;
-    if (/\.{3,}/.test(punct)) pause = 500;
-
-    chunks.push({ text: phrase, pauseAfterMs: pause });
-  }
-  return chunks;
+function chunkForProsody(text: string): string[] {
+  return text
+    .split(/[.!?;,]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 // ─── Web Audio Processing ────────────────────────────────────────
@@ -177,74 +179,77 @@ export function speakSarcastic(options: SpeakOptions): void {
 
   stopSpeaking();
 
-  const processedText = applySarcasticProsody(text);
+  const spokenOnly = extractSpokenText(text);
+  const processedText = applySarcasticProsody(spokenOnly);
   const chunks = chunkForProsody(processedText);
   const profile = getSarcasticProfile(direction);
   const voice = selectVoice(direction);
 
+  if (!chunks.length) return;
+
   let stopped = false;
   let started = false;
-  let index = 0;
 
-  const speakChunk = () => {
-    if (stopped) return;
-    if (index >= chunks.length) {
-      activeChain = null;
-      onEnd?.();
-      return;
-    }
+  activeChain = {
+    stop: () => {
+      stopped = true;
+    },
+  };
 
-    const { text: chunkText, pauseAfterMs } = chunks[index];
-    const position = index / Math.max(1, chunks.length - 1);
+  try {
+    const ctx = getAudioContext();
+    if (ctx.state === "suspended") void ctx.resume();
+    createVoiceProcessingChain(ctx, direction);
+  } catch {
+    /* noop */
+  }
 
-    // Natural prosody contour: start neutral, peak mid, fall at the end
-    const arc = Math.sin(position * Math.PI);
-    const jitter = (Math.random() - 0.5) * 0.08;
-    const pitchOffset = arc * 0.1 + jitter;
-    const rateJitter = (Math.random() - 0.5) * 0.05;
-
-    // Last chunk = deadpan drop
-    const isLast = index === chunks.length - 1;
-    const pitchAdjust = isLast ? -0.08 : pitchOffset;
-
+  chunks.forEach((chunkText, index) => {
     const utterance = new SpeechSynthesisUtterance(chunkText);
+    const position = index / Math.max(1, chunks.length - 1);
+    const arc = Math.sin(position * Math.PI);
+    const isLast = index === chunks.length - 1;
+
+    const pitchAdjust = direction === "womenToMen"
+      ? (isLast ? -0.03 : arc * 0.03)
+      : (isLast ? -0.08 : arc * 0.08 + (Math.random() - 0.5) * 0.04);
+    const rateAdjust = direction === "womenToMen"
+      ? 0
+      : (Math.random() - 0.5) * 0.04;
+
     utterance.volume = profile.volume;
     utterance.pitch = Math.max(0.1, Math.min(2, profile.pitch + pitchAdjust));
-    utterance.rate = Math.max(0.5, Math.min(1.4, profile.rate + rateJitter));
+    utterance.rate = Math.max(0.5, Math.min(1.4, profile.rate + rateAdjust));
+
     if (voice) {
       utterance.voice = voice;
       utterance.lang = voice.lang;
+    } else {
+      utterance.lang = "en-US";
     }
 
     utterance.onstart = () => {
-      if (!started) {
+      if (!started && !stopped) {
         started = true;
         onStart?.();
       }
     };
+
     utterance.onend = () => {
-      index += 1;
-      setTimeout(speakChunk, pauseAfterMs);
+      if (stopped) return;
+      if (index === chunks.length - 1) {
+        activeChain = null;
+        onEnd?.();
+      }
     };
+
     utterance.onerror = (e) => {
       activeChain = null;
       onError?.(e);
     };
 
     window.speechSynthesis.speak(utterance);
-  };
-
-  activeChain = { stop: () => { stopped = true; } };
-
-  try {
-    const ctx = getAudioContext();
-    if (ctx.state === "suspended") ctx.resume();
-    createVoiceProcessingChain(ctx, direction);
-  } catch {
-    /* noop */
-  }
-
-  speakChunk();
+  });
 }
 
 export function stopSpeaking(): void {
