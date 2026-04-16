@@ -2,7 +2,13 @@ import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getRandomQuestions } from "@/data/newlywedQuestions";
 import type { NewlywedQuestion } from "@/data/newlywedQuestions";
-import { compareAnswers, MATCH_THRESHOLD } from "@/lib/answerSimilarity";
+import { compareAnswers, DIFFICULTY_THRESHOLDS, type Difficulty } from "@/lib/answerSimilarity";
+
+const DIFFICULTY_META: Record<Difficulty, { label: string; emoji: string; blurb: string }> = {
+  easy: { label: "Easy", emoji: "🌱", blurb: "50% similar = match. Forgiving — great for first-timers." },
+  medium: { label: "Medium", emoji: "🔥", blurb: "75% similar = match. The classic challenge." },
+  hard: { label: "Hard", emoji: "💎", blurb: "90% similar = match. Only soulmates need apply." },
+};
 
 const QUESTIONS_TOTAL = 6;
 const MAX_ANSWER_LEN = 140;
