@@ -12,10 +12,10 @@ type Tab = "translator" | "game" | "tod";
 const Index = () => {
   const [tab, setTab] = useState<Tab>("translator");
 
-  const tabs: { id: Tab; label: string; icon: string }[] = [
+  const tabs: { id: Tab; label: string; icon: string; animated?: boolean }[] = [
     { id: "translator", label: "Translator", icon: translatorIcon },
     { id: "game", label: "Newlywed", icon: newlywedIcon },
-    { id: "tod", label: "Truth/Dare", icon: truthOrDareIcon },
+    { id: "tod", label: "Truth/Dare", icon: truthOrDareIcon, animated: true },
   ];
 
   return (
@@ -30,16 +30,22 @@ const Index = () => {
                 tab === t.id ? "text-primary" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <img
-                src={t.icon}
-                alt={t.label}
-                loading="lazy"
-                width={48}
-                height={48}
-                className={`w-10 h-10 rounded-full object-cover border-2 transition-all ${
-                  tab === t.id ? "border-primary shadow-md" : "border-border opacity-70"
+              <span
+                className={`relative inline-block rounded-full ${
+                  t.animated ? "flame-glow" : ""
                 }`}
-              />
+              >
+                <img
+                  src={t.icon}
+                  alt={t.label}
+                  loading="lazy"
+                  width={48}
+                  height={48}
+                  className={`w-10 h-10 rounded-full object-cover border-2 transition-all ${
+                    tab === t.id ? "border-primary shadow-md" : "border-border opacity-70"
+                  } ${t.animated ? "flame-animated" : ""}`}
+                />
+              </span>
               <span className="text-[11px] sm:text-xs font-bold">{t.label}</span>
               {tab === t.id && (
                 <motion.div

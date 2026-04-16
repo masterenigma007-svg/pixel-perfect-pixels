@@ -87,6 +87,30 @@
   animation: mirage-shift 5s ease infinite;
 }
 
+/* Flame flicker animation for the Truth/Dare tab icon */
+@keyframes flame-flicker {
+  0%   { transform: scale(1)    rotate(-1deg); filter: brightness(1)   hue-rotate(0deg); }
+  20%  { transform: scale(1.06) rotate(1deg);  filter: brightness(1.18) hue-rotate(-6deg); }
+  40%  { transform: scale(0.98) rotate(-1deg); filter: brightness(0.95) hue-rotate(4deg); }
+  60%  { transform: scale(1.05) rotate(2deg);  filter: brightness(1.15) hue-rotate(-3deg); }
+  80%  { transform: scale(0.99) rotate(-2deg); filter: brightness(1.05) hue-rotate(2deg); }
+  100% { transform: scale(1)    rotate(-1deg); filter: brightness(1)   hue-rotate(0deg); }
+}
+
+.flame-animated {
+  animation: flame-flicker 1.4s ease-in-out infinite;
+  transform-origin: 50% 70%;
+}
+
+@keyframes flame-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 140, 0, 0.55), 0 0 18px rgba(255, 80, 0, 0.35); }
+  50%      { box-shadow: 0 0 14px rgba(255, 170, 40, 0.85), 0 0 28px rgba(255, 80, 0, 0.55); }
+}
+
+.flame-glow {
+  animation: flame-glow 1.4s ease-in-out infinite;
+}
+
 /* Age group slider */
 .age-slider {
   -webkit-appearance: none;
