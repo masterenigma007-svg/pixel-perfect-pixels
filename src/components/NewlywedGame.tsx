@@ -37,11 +37,15 @@ export default function NewlywedGame() {
   const [gameState, setGameState] = useState<GameState>("setup");
   const [player1Name, setPlayer1Name] = useState("");
   const [player2Name, setPlayer2Name] = useState("");
+  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [questions, setQuestions] = useState<NewlywedQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [p1Answer, setP1Answer] = useState("");
   const [p2Answer, setP2Answer] = useState("");
   const [results, setResults] = useState<RoundResult[]>([]);
+
+  const threshold = DIFFICULTY_THRESHOLDS[difficulty];
+  const thresholdPct = Math.round(threshold * 100);
 
   const startGame = useCallback(() => {
     setQuestions(getRandomQuestions(QUESTIONS_TOTAL));
@@ -63,7 +67,7 @@ export default function NewlywedGame() {
 
   const submitP2 = () => {
     if (!p2Answer.trim() || !q) return;
-    const sim = compareAnswers(p1Answer, p2Answer);
+    const sim = compareAnswers(p1Answer, p2Answer, threshold);
     setResults((prev) => [
       ...prev,
       {
@@ -98,7 +102,7 @@ export default function NewlywedGame() {
   const accuracy = results.length
     ? Math.round((results.reduce((s, r) => s + r.score, 0) / results.length) * 100)
     : 0;
-  const passedThreshold = accuracy >= Math.round(MATCH_THRESHOLD * 100);
+  const passedThreshold = accuracy >= thresholdPct;
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
