@@ -245,9 +245,9 @@ Deno.serve(async (req) => {
 
     console.log(`[female-tts] cache MISS ${hash.slice(0, 8)} — generating`);
 
-    // Provider chain: Lovable AI (free) → ElevenLabs → Google
+    // Provider chain: ElevenLabs → Google fallback
+    // (Lovable AI Gateway does not support TTS — only chat/image models)
     const providers: Array<{ name: string; fn: () => Promise<Uint8Array | null> }> = [
-      { name: "lovable-openai-tts", fn: () => fetchLovableTts(text) },
       { name: "elevenlabs", fn: () => fetchElevenLabs(text) },
     ];
 
