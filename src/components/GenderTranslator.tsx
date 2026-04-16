@@ -5,7 +5,7 @@ import type { Direction, AgeGroup } from "@/data/translations";
 import { speakSarcastic, stopSpeaking, preloadVoices } from "@/lib/sarcasticVoiceEngine";
 import micIcon from "@/assets/mic-icon.png";
 import speakerIcon from "@/assets/speaker-icon.png";
-import translatorHero from "@/assets/translator-hero.jpg";
+
 
 interface HistoryItem {
   input: string;
@@ -214,15 +214,6 @@ export default function GenderTranslator() {
           style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.60)" }}
         >
           <div className="h-1.5 bg-gradient-to-r from-primary to-secondary" />
-
-          <img
-            src={translatorHero}
-            alt="Two speech bubbles representing communication between men and women"
-            loading="lazy"
-            width={1024}
-            height={512}
-            className="w-full h-32 sm:h-40 object-cover"
-          />
 
           <div className="p-6 space-y-5">
             {/* Direction toggle */}
