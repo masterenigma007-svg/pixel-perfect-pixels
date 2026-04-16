@@ -15,7 +15,7 @@ const Index = () => {
 
   const tabs: { id: Tab; label: string; icon: string; animated?: boolean }[] = [
     { id: "translator", label: "Translator", icon: translatorIcon },
-    { id: "game", label: "Newlywed", icon: newlywedIcon },
+    { id: "game", label: "Compatibility", icon: newlywedIcon },
     { id: "tod", label: "Truth/Dare", icon: truthOrDareIcon, animated: true },
   ];
 
