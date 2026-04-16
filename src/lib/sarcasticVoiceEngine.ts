@@ -107,10 +107,13 @@ function getSarcasticProfile(direction: Direction): VoiceProfile {
 
 /**
  * Split into natural clauses for prosody variation.
- * Chunks are queued immediately within the original user gesture so browsers
- * do not treat later speech calls as detached async playback.
+ * Male voice uses a single utterance to avoid the choppy, robotic reset between chunks.
  */
-function chunkForProsody(text: string): string[] {
+function chunkForProsody(text: string, direction: Direction): string[] {
+  if (direction === "womenToMen") {
+    return [text.trim()].filter(Boolean);
+  }
+
   return text
     .split(/[.!?;,]+/)
     .map((part) => part.trim())
@@ -181,7 +184,7 @@ export function speakSarcastic(options: SpeakOptions): void {
 
   const spokenOnly = extractSpokenText(text);
   const processedText = applySarcasticProsody(spokenOnly);
-  const chunks = chunkForProsody(processedText);
+  const chunks = chunkForProsody(processedText, direction);
   const profile = getSarcasticProfile(direction);
   const voice = selectVoice(direction);
 
@@ -209,11 +212,12 @@ export function speakSarcastic(options: SpeakOptions): void {
     const position = index / Math.max(1, chunks.length - 1);
     const arc = Math.sin(position * Math.PI);
     const isLast = index === chunks.length - 1;
+    const useSteadyMaleDelivery = direction === "womenToMen";
 
-    const pitchAdjust = direction === "womenToMen"
-      ? (isLast ? -0.03 : arc * 0.03)
+    const pitchAdjust = useSteadyMaleDelivery
+      ? 0
       : (isLast ? -0.08 : arc * 0.08 + (Math.random() - 0.5) * 0.04);
-    const rateAdjust = direction === "womenToMen"
+    const rateAdjust = useSteadyMaleDelivery
       ? 0
       : (Math.random() - 0.5) * 0.04;
 
