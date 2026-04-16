@@ -92,6 +92,26 @@ function isBritishFemaleVoice(voice: SpeechSynthesisVoice): boolean {
   );
 }
 
+/**
+ * Inserts subtle natural pauses and breath cues so the female TTS voice reads
+ * with a more human cadence — short pauses after commas, longer after sentence
+ * endings, and a tiny lilt before conjunctions.
+ */
+function humanizeFemaleCadence(text: string): string {
+  return text
+    // Slight breath after sentence endings.
+    .replace(/([.!?])\s+/g, "$1… ")
+    // Brief pause after commas, semicolons, colons.
+    .replace(/([,;:])\s+/g, "$1, ")
+    // Soften em-dashes into a spoken pause.
+    .replace(/\s—\s/g, ", … ")
+    // Tiny lift before common conjunctions to break monotone delivery.
+    .replace(/\b(and|but|so|because|though|although)\b/gi, ", $1")
+    // Collapse any accidental double spaces.
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function scoreVoice(voice: SpeechSynthesisVoice, direction: Direction, targetNames: string[]): number {
   const name = voice.name.toLowerCase();
   const lang = voice.lang.toLowerCase();
