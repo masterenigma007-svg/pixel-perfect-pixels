@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import GenderTranslator from "@/components/GenderTranslator";
 import NewlywedGame from "@/components/NewlywedGame";
 import TruthOrDare from "@/components/TruthOrDare";
@@ -61,6 +62,12 @@ const Index = () => {
       {tab === "translator" && <GenderTranslator />}
       {tab === "game" && <NewlywedGame />}
       {tab === "tod" && <TruthOrDare />}
+
+      <footer className="max-w-lg mx-auto px-4 py-6 text-center text-xs text-muted-foreground">
+        <Link to="/privacy" className="hover:text-foreground transition-colors">
+          Privacy Policy
+        </Link>
+      </footer>
     </div>
   );
 };
