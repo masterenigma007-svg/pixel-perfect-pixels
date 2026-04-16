@@ -10,6 +10,7 @@ interface ServerFemaleSpeakOptions {
 
 let audioContext: AudioContext | null = null;
 const audioCache = new Map<string, ArrayBuffer>();
+const urlCache = new Map<string, string>();
 
 function getAudioContext(): AudioContext {
   if (!audioContext || audioContext.state === "closed") {
@@ -22,15 +23,24 @@ async function fetchFemaleAudio(text: string): Promise<ArrayBuffer> {
   const cached = audioCache.get(text);
   if (cached) return cached.slice(0);
 
-  const { data, error } = await supabase.functions.invoke("female-tts", {
-    body: { text },
-  });
-
-  if (error) throw error;
-  if (!(data instanceof Blob)) {
-    throw new Error("Unexpected TTS response");
+  // 1. Resolve the public CDN URL (cached server-side after first generation)
+  let url = urlCache.get(text);
+  if (!url) {
+    const { data, error } = await supabase.functions.invoke("female-tts", {
+      body: { text },
+    });
+    if (error) throw error;
+    const payload = data as { url?: string } | null;
+    if (!payload?.url) throw new Error("Missing audio URL in TTS response");
+    url = payload.url;
+    urlCache.set(text, url);
   }
-  const buffer = await data.arrayBuffer();
+
+  // 2. Stream the MP3 from the public bucket (CDN, fast)
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Audio fetch failed: ${res.status}`);
+  const buffer = await res.arrayBuffer();
+
   if (audioCache.size > 30) {
     const firstKey = audioCache.keys().next().value;
     if (firstKey) audioCache.delete(firstKey);

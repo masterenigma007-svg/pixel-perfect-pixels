@@ -17,6 +17,46 @@ const corsHeaders = {
 
 const MAX_CHUNK = 190; // Google TTS endpoint limit per request (fallback only)
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const BUCKET = "tts-cache";
+
+async function sha256Hex(text: string): Promise<string> {
+  const data = new TextEncoder().encode(text);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function publicUrlFor(path: string): string {
+  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
+}
+
+async function cacheHas(path: string): Promise<boolean> {
+  const res = await fetch(publicUrlFor(path), { method: "HEAD" });
+  return res.ok;
+}
+
+async function cachePut(path: string, audio: Uint8Array): Promise<void> {
+  const res = await fetch(
+    `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        "Content-Type": "audio/mpeg",
+        "x-upsert": "true",
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+      body: audio,
+    }
+  );
+  if (!res.ok) {
+    console.warn(`[female-tts] cache upload failed ${res.status}: ${await res.text()}`);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Microsoft Edge TTS (free, no API key, neural voices)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -257,17 +297,36 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ── 1. Cache check ─────────────────────────────────────────────
+    const hash = await sha256Hex(text);
+    const path = `${hash}.mp3`;
+    const url = publicUrlFor(path);
+
+    if (await cacheHas(path)) {
+      console.log(`[female-tts] cache HIT ${hash.slice(0, 8)}`);
+      return new Response(JSON.stringify({ url, cached: true }), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "X-TTS-Cache": "hit",
+        },
+      });
+    }
+    console.log(`[female-tts] cache MISS ${hash.slice(0, 8)}`);
+
+    // ── 2. Generate ────────────────────────────────────────────────
     // Try Microsoft Edge TTS first — neural Sonia voice, much more human.
     console.log(`[female-tts] Trying Edge TTS for ${text.length} chars`);
     const edgeAudio = await fetchEdgeTts(text);
     if (edgeAudio && edgeAudio.length > 0) {
       console.log(`[female-tts] Edge TTS success: ${edgeAudio.length} bytes`);
-      return new Response(edgeAudio, {
+      await cachePut(path, edgeAudio);
+      return new Response(JSON.stringify({ url, cached: false }), {
         status: 200,
         headers: {
           ...corsHeaders,
-          "Content-Type": "audio/mpeg",
-          "Cache-Control": "public, max-age=86400",
+          "Content-Type": "application/json",
           "X-TTS-Provider": "edge-tts",
         },
       });
@@ -288,13 +347,13 @@ Deno.serve(async (req) => {
       audioBuffers.push(await fetchGoogleChunk(chunk));
     }
     const merged = concatMp3(audioBuffers);
+    await cachePut(path, merged);
 
-    return new Response(merged, {
+    return new Response(JSON.stringify({ url, cached: false }), {
       status: 200,
       headers: {
         ...corsHeaders,
-        "Content-Type": "audio/mpeg",
-        "Cache-Control": "public, max-age=86400",
+        "Content-Type": "application/json",
         "X-TTS-Provider": "google-fallback",
       },
     });
