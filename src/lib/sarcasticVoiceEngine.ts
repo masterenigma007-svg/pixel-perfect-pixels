@@ -33,17 +33,6 @@ export function speakSarcastic(options: SpeakOptions): void {
     callback?.();
   };
 
-  const fallbackToBrowser = () => {
-    if (sessionId !== playbackSessionId) return;
-    activePlayback = speakWithBrowserTts({
-      text: processedText,
-      direction,
-      onStart,
-      onEnd: () => finalizePlayback(onEnd),
-      onError: (error) => finalizePlayback(() => onError?.(error)),
-    });
-  };
-
   if (direction === "menToWomen") {
     speakWithServerFemaleVoice({
       text: processedText,
