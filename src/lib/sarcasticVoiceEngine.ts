@@ -60,28 +60,24 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
 
 // ─── Sarcastic Text Processing ───────────────────────────────────
 
+/**
+ * Lightly stretches sarcastic-tagged words. Does NOT inject punctuation tokens
+ * — pacing comes from per-chunk timing instead, so screen readers / TTS engines
+ * never literally pronounce "comma" or "dot".
+ */
 function applySarcasticProsody(text: string): string {
   let result = text;
 
-  result = result.replace(/\.\.\./g, ", ... , ");
-  result = result.replace(/!/g, ". ... ");
-  result = result.replace(/\?/g, "? , ");
-  result = result.replace(/"([^"]+)"/g, ', ... "$1" ... , ');
-
-  // Stretched vowels = classic sarcasm
-  result = result.replace(/\b(sure)\b/gi, "suuure");
-  result = result.replace(/\b(right)\b/gi, "riiight");
-  result = result.replace(/\b(wow)\b/gi, "wooow");
-  result = result.replace(/\b(great)\b/gi, "greaaat");
-  result = result.replace(/\b(fine)\b/gi, "fiiine");
+  // Stretched vowels for classic sarcasm flavor
+  result = result.replace(/\bsure\b/gi, "suuure");
+  result = result.replace(/\bright\b/gi, "riiight");
+  result = result.replace(/\bwow\b/gi, "wooow");
+  result = result.replace(/\bgreat\b/gi, "greaaat");
+  result = result.replace(/\bfine\b/gi, "fiiine");
   result = result.replace(/\b(okay|ok)\b/gi, "okaaay");
 
-  const sarcasticWords = /\b(actually|obviously|clearly|basically|literally|whatever|totally|absolutely|definitely|apparently|honestly|seriously|really)\b/gi;
-  result = result.replace(sarcasticWords, ", ... $1");
-
-  result = result.replace(/\b(oh|wow|gee|hmm)\b/gi, "$1,");
-
-  result = result.replace(/\s+,/g, ",").replace(/\s{2,}/g, " ").trim();
+  // Normalize whitespace, strip stray punctuation tokens that some engines vocalize
+  result = result.replace(/\s{2,}/g, " ").trim();
   return result;
 }
 
@@ -95,18 +91,34 @@ interface VoiceProfile {
 
 function getSarcasticProfile(direction: Direction): VoiceProfile {
   if (direction === "menToWomen") {
-    return { rate: 0.9, pitch: 1.15, volume: 1.0 };
+    // Female: lifted pitch, measured pace
+    return { rate: 0.92, pitch: 1.12, volume: 1.0 };
   }
-  return { rate: 0.86, pitch: 0.78, volume: 1.0 };
+  // Male: natural lower register — NOT too low (was 0.78 → robotic)
+  return { rate: 0.95, pitch: 0.95, volume: 1.0 };
 }
 
-/** Split into clauses so each gets its own prosody. */
-function chunkForProsody(text: string): string[] {
-  const parts = text.split(/([,.?!]+\s*)/);
-  const chunks: string[] = [];
+/**
+ * Split into natural clauses for prosody variation. Punctuation is REMOVED
+ * from the spoken text (kept only as a split marker) so it never gets read aloud.
+ * Pauses are added between chunks via setTimeout instead.
+ */
+function chunkForProsody(text: string): { text: string; pauseAfterMs: number }[] {
+  // Split on punctuation but keep delimiters so we know how long to pause
+  const parts = text.split(/([.!?,;:]+)/);
+  const chunks: { text: string; pauseAfterMs: number }[] = [];
+
   for (let i = 0; i < parts.length; i += 2) {
-    const merged = ((parts[i] ?? "") + (parts[i + 1] ?? "")).trim();
-    if (merged) chunks.push(merged);
+    const phrase = (parts[i] ?? "").trim();
+    const punct = parts[i + 1] ?? "";
+    if (!phrase) continue;
+
+    let pause = 80;
+    if (/[.!?]/.test(punct)) pause = 320;
+    else if (/[,;:]/.test(punct)) pause = 180;
+    if (/\.{3,}/.test(punct)) pause = 500;
+
+    chunks.push({ text: phrase, pauseAfterMs: pause });
   }
   return chunks;
 }
