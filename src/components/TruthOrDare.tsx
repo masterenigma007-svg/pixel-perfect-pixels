@@ -34,9 +34,6 @@ export default function TruthOrDare() {
     setStage("choose");
   };
 
-  const ageLabel =
-    age < 21 ? "😇 Light" : age < 30 ? "😊 Sweet" : age < 50 ? "💞 Deeper" : "🌟 Reflective";
-
   return (
     <div className="max-w-lg mx-auto p-4 sm:p-6">
       <AnimatePresence mode="wait">
