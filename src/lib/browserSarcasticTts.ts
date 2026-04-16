@@ -19,16 +19,24 @@ interface VoiceProfile {
 }
 
 const FEMALE_NAMES = [
-  "google uk english female", "google us english",
+  "google uk english female",
+  "microsoft libby", "microsoft sonia", "microsoft hollie", "microsoft maisie",
   "microsoft aria", "microsoft jenny", "microsoft ava", "microsoft emma",
   "microsoft michelle", "microsoft zira",
-  "samantha", "victoria", "karen", "tessa", "fiona", "moira",
-  "alice", "hazel", "susan", "serena", "allison", "ava", "emma", "aria",
+  "kate", "serena", "fiona", "moira", "tessa", "karen", "victoria",
+  "samantha", "alice", "hazel", "susan", "allison", "ava", "emma", "aria",
 ];
 
 const PREMIUM_FEMALE_NAMES = [
-  "google uk english female", "microsoft aria", "microsoft jenny",
-  "microsoft ava", "microsoft emma", "samantha", "serena", "allison",
+  "google uk english female",
+  "microsoft libby", "microsoft sonia", "microsoft hollie",
+  "microsoft aria", "microsoft jenny", "serena", "kate",
+];
+
+const BRITISH_FEMALE_NAMES = [
+  "google uk english female",
+  "microsoft libby", "microsoft sonia", "microsoft hollie", "microsoft maisie",
+  "kate", "serena", "fiona", "hazel", "susan",
 ];
 
 const MALE_NAMES = [
@@ -55,6 +63,7 @@ function scoreVoice(voice: SpeechSynthesisVoice, direction: Direction, targetNam
   const name = voice.name.toLowerCase();
   const lang = voice.lang.toLowerCase();
   const preferBritishMale = direction === "womenToMen";
+  const preferBritishFemale = direction === "menToWomen";
 
   let score = 0;
   if (targetNames.some((target) => name.includes(target))) score += 10;
@@ -65,6 +74,10 @@ function scoreVoice(voice: SpeechSynthesisVoice, direction: Direction, targetNam
   if (preferBritishMale) {
     if (lang.startsWith("en-gb") || lang.startsWith("en-uk")) score += 14;
     if (BRITISH_MALE_NAMES.some((target) => name.includes(target))) score += 10;
+  } else if (preferBritishFemale) {
+    if (lang.startsWith("en-gb") || lang.startsWith("en-uk")) score += 16;
+    if (BRITISH_FEMALE_NAMES.some((target) => name.includes(target))) score += 12;
+    if (PREMIUM_FEMALE_NAMES.some((target) => name.includes(target))) score += 8;
   } else {
     if (PREMIUM_FEMALE_NAMES.some((target) => name.includes(target))) score += 12;
     if (lang.startsWith("en-us") || lang.startsWith("en-gb")) score += 3;
@@ -96,7 +109,8 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
 
 function getSarcasticProfile(direction: Direction): VoiceProfile {
   if (direction === "menToWomen") {
-    return { rate: 0.97, pitch: 0.95, volume: 1.0 };
+    // Slightly slower, slightly lower pitch — natural British female cadence, less synthetic edge.
+    return { rate: 0.92, pitch: 0.98, volume: 1.0 };
   }
 
   return { rate: 0.9, pitch: 1.05, volume: 1.0 };
@@ -120,7 +134,7 @@ export function speakWithBrowserTts(options: BrowserSpeakOptions): SpeechPlaybac
     utterance.voice = voice;
     utterance.lang = voice.lang;
   } else {
-    utterance.lang = direction === "womenToMen" ? "en-GB" : "en-US";
+    utterance.lang = "en-GB";
   }
 
   utterance.onstart = () => {
