@@ -35,8 +35,10 @@ const PREMIUM_FEMALE_NAMES = [
 
 const BRITISH_FEMALE_NAMES = [
   "google uk english female",
+  "microsoft libby online", "microsoft sonia online", "microsoft hollie online",
   "microsoft libby", "microsoft sonia", "microsoft hollie", "microsoft maisie",
-  "kate", "serena", "fiona", "hazel", "susan",
+  "microsoft abbi", "microsoft bella", "microsoft olivia",
+  "kate", "serena", "fiona", "hazel", "susan", "stephanie",
 ];
 
 const MALE_NAMES = [
@@ -75,9 +77,14 @@ function scoreVoice(voice: SpeechSynthesisVoice, direction: Direction, targetNam
     if (lang.startsWith("en-gb") || lang.startsWith("en-uk")) score += 14;
     if (BRITISH_MALE_NAMES.some((target) => name.includes(target))) score += 10;
   } else if (preferBritishFemale) {
-    if (lang.startsWith("en-gb") || lang.startsWith("en-uk")) score += 16;
-    if (BRITISH_FEMALE_NAMES.some((target) => name.includes(target))) score += 12;
+    // Strongly prefer British English female voices
+    if (lang.startsWith("en-gb") || lang.startsWith("en-uk")) score += 24;
+    else if (lang.startsWith("en-au") || lang.startsWith("en-ie")) score += 6;
+    else if (lang.startsWith("en")) score -= 8; // discourage US accents
+    if (BRITISH_FEMALE_NAMES.some((target) => name.includes(target))) score += 18;
     if (PREMIUM_FEMALE_NAMES.some((target) => name.includes(target))) score += 8;
+    // Online/neural variants are dramatically more human
+    if (name.includes("online") || name.includes("neural") || name.includes("natural")) score += 10;
   } else {
     if (PREMIUM_FEMALE_NAMES.some((target) => name.includes(target))) score += 12;
     if (lang.startsWith("en-us") || lang.startsWith("en-gb")) score += 3;
@@ -109,8 +116,8 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
 
 function getSarcasticProfile(direction: Direction): VoiceProfile {
   if (direction === "menToWomen") {
-    // Slightly slower, slightly lower pitch — natural British female cadence, less synthetic edge.
-    return { rate: 0.92, pitch: 0.98, volume: 1.0 };
+    // Natural British female cadence — closer to human speech, less synthetic edge.
+    return { rate: 0.95, pitch: 1.0, volume: 1.0 };
   }
 
   return { rate: 0.9, pitch: 1.05, volume: 1.0 };
