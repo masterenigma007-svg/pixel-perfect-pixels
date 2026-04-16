@@ -121,7 +121,7 @@ export default function NewlywedGame() {
             animate={{ opacity: 1, transition: { delay: 0.2 } }}
             className="text-muted-foreground text-sm mt-2 italic"
           >
-            Both partners answer. 75%+ similar = you really know each other.
+            Both partners answer. Match adjectives = you really know each other.
           </motion.p>
         </header>
 
