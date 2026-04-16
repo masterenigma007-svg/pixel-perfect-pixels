@@ -2,16 +2,29 @@ import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getRandomQuestions } from "@/data/newlywedQuestions";
 import type { NewlywedQuestion } from "@/data/newlywedQuestions";
+import { compareAnswers, MATCH_THRESHOLD } from "@/lib/answerSimilarity";
 
+const QUESTIONS_TOTAL = 6;
+const MAX_ANSWER_LEN = 140;
 
-const QUESTIONS_PER_PLAYER = 5;
+type GameState = "setup" | "p1-answer" | "p2-answer" | "reveal" | "results";
 
-type GameState = "setup" | "playing" | "reveal" | "results";
+interface RoundResult {
+  question: string;
+  perspective: "his" | "hers";
+  p1Answer: string;
+  p2Answer: string;
+  score: number; // 0..1
+  isMatch: boolean;
+  comedy: string; // a representative comedic reveal for flavor
+}
 
-interface PlayerScore {
-  name: string;
-  score: number;
-  answers: { question: string; picked: string; comedy: string }[];
+function pickComedyLine(q: NewlywedQuestion): string {
+  // Prefer the "🎯" ringer, otherwise a random one.
+  const targeted = Object.values(q.comedyAnswers).find((c) => c.includes("🎯"));
+  if (targeted) return targeted;
+  const all = Object.values(q.comedyAnswers);
+  return all[Math.floor(Math.random() * all.length)] ?? "Interesting...";
 }
 
 export default function NewlywedGame() {
@@ -20,49 +33,43 @@ export default function NewlywedGame() {
   const [player2Name, setPlayer2Name] = useState("");
   const [questions, setQuestions] = useState<NewlywedQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [players, setPlayers] = useState<[PlayerScore, PlayerScore]>([
-    { name: "", score: 0, answers: [] },
-    { name: "", score: 0, answers: [] },
-  ]);
-
-  // Current player alternates: 0, 1, 0, 1...
-  const currentPlayerIndex = currentIndex % 2;
-  const currentPlayer = players[currentPlayerIndex];
+  const [p1Answer, setP1Answer] = useState("");
+  const [p2Answer, setP2Answer] = useState("");
+  const [results, setResults] = useState<RoundResult[]>([]);
 
   const startGame = useCallback(() => {
-    const p1 = player1Name.trim() || "Player 1";
-    const p2 = player2Name.trim() || "Player 2";
-    setQuestions(getRandomQuestions(QUESTIONS_PER_PLAYER * 2));
+    setQuestions(getRandomQuestions(QUESTIONS_TOTAL));
     setCurrentIndex(0);
-    setSelectedAnswer(null);
-    setPlayers([
-      { name: p1, score: 0, answers: [] },
-      { name: p2, score: 0, answers: [] },
+    setP1Answer("");
+    setP2Answer("");
+    setResults([]);
+    setGameState("p1-answer");
+  }, []);
+
+  const p1Name = player1Name.trim() || "Player 1";
+  const p2Name = player2Name.trim() || "Player 2";
+  const q = questions[currentIndex];
+
+  const submitP1 = () => {
+    if (!p1Answer.trim()) return;
+    setGameState("p2-answer");
+  };
+
+  const submitP2 = () => {
+    if (!p2Answer.trim() || !q) return;
+    const sim = compareAnswers(p1Answer, p2Answer);
+    setResults((prev) => [
+      ...prev,
+      {
+        question: q.question,
+        perspective: q.perspective,
+        p1Answer: p1Answer.trim(),
+        p2Answer: p2Answer.trim(),
+        score: sim.score,
+        isMatch: sim.isMatch,
+        comedy: pickComedyLine(q),
+      },
     ]);
-    setGameState("playing");
-  }, [player1Name, player2Name]);
-
-  const handleSelect = (option: string) => {
-    if (selectedAnswer) return;
-    setSelectedAnswer(option);
-    const q = questions[currentIndex];
-    const comedy = q.comedyAnswers[option] || "Interesting choice...";
-    const isCorrect = comedy.includes("🎯");
-
-    setPlayers((prev) => {
-      const updated = [...prev] as [PlayerScore, PlayerScore];
-      updated[currentPlayerIndex] = {
-        ...updated[currentPlayerIndex],
-        score: updated[currentPlayerIndex].score + (isCorrect ? 1 : 0),
-        answers: [
-          ...updated[currentPlayerIndex].answers,
-          { question: q.question, picked: option, comedy },
-        ],
-      };
-      return updated;
-    });
-
     setGameState("reveal");
   };
 
@@ -71,24 +78,21 @@ export default function NewlywedGame() {
       setGameState("results");
     } else {
       setCurrentIndex((i) => i + 1);
-      setSelectedAnswer(null);
-      setGameState("playing");
+      setP1Answer("");
+      setP2Answer("");
+      setGameState("p1-answer");
     }
   };
 
   const handlePlayAgain = () => {
     setGameState("setup");
-    setPlayer1Name(players[0].name);
-    setPlayer2Name(players[1].name);
   };
 
-  const q = questions[currentIndex];
-  const winner =
-    players[0].score > players[1].score
-      ? players[0].name
-      : players[1].score > players[0].score
-      ? players[1].name
-      : null;
+  const matches = results.filter((r) => r.isMatch).length;
+  const accuracy = results.length
+    ? Math.round((results.reduce((s, r) => s + r.score, 0) / results.length) * 100)
+    : 0;
+  const passedThreshold = accuracy >= Math.round(MATCH_THRESHOLD * 100);
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -107,7 +111,7 @@ export default function NewlywedGame() {
             animate={{ opacity: 1, transition: { delay: 0.2 } }}
             className="text-muted-foreground text-sm mt-2 italic"
           >
-            How well do you really know what your partner means?
+            Both partners answer. 75%+ similar = you really know each other.
           </motion.p>
         </header>
 
@@ -121,7 +125,7 @@ export default function NewlywedGame() {
 
           <div className="p-6">
             <AnimatePresence mode="wait">
-              {/* SETUP - Name entry */}
+              {/* SETUP */}
               {gameState === "setup" && (
                 <motion.div
                   key="setup"
@@ -131,12 +135,10 @@ export default function NewlywedGame() {
                   className="text-center space-y-6 py-6"
                 >
                   <div className="text-6xl">💑</div>
-                  <h2 className="text-xl font-bold text-foreground">
-                    Enter Your Names
-                  </h2>
+                  <h2 className="text-xl font-bold text-foreground">Enter Your Names</h2>
                   <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mx-auto">
-                    Take turns answering questions about what your partner <em>really</em> means.
-                    The player with the most 🎯 wins!
+                    For each question, <em>both of you</em> type your honest answer.
+                    We compare them — adjectives matter most. 75%+ similar = match!
                   </p>
 
                   <div className="space-y-4 text-left">
@@ -147,7 +149,7 @@ export default function NewlywedGame() {
                       <input
                         type="text"
                         value={player1Name}
-                        onChange={(e) => setPlayer1Name(e.target.value)}
+                        onChange={(e) => setPlayer1Name(e.target.value.slice(0, 40))}
                         placeholder="Enter name..."
                         className="w-full px-4 py-3 border-2 border-border rounded-xl text-sm bg-muted text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors"
                       />
@@ -159,7 +161,7 @@ export default function NewlywedGame() {
                       <input
                         type="text"
                         value={player2Name}
-                        onChange={(e) => setPlayer2Name(e.target.value)}
+                        onChange={(e) => setPlayer2Name(e.target.value.slice(0, 40))}
                         placeholder="Enter name..."
                         className="w-full px-4 py-3 border-2 border-border rounded-xl text-sm bg-muted text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors"
                       />
@@ -167,10 +169,10 @@ export default function NewlywedGame() {
                   </div>
 
                   <div className="space-y-2 text-left bg-muted rounded-xl p-4 text-sm text-muted-foreground">
-                    <p>🎯 = Perfect answer (1 point)</p>
-                    <p>🔄 Players alternate turns</p>
-                    <p>📝 {QUESTIONS_PER_PLAYER} questions each ({QUESTIONS_PER_PLAYER * 2} total)</p>
-                    <p>😂 Comedic reveals after each answer</p>
+                    <p>✍️ Both players type their own answer</p>
+                    <p>🎯 75%+ similarity = match (point)</p>
+                    <p>🧠 Adjectives are weighted heaviest</p>
+                    <p>📝 {QUESTIONS_TOTAL} questions total</p>
                   </div>
 
                   <motion.button
@@ -184,29 +186,19 @@ export default function NewlywedGame() {
                 </motion.div>
               )}
 
-              {/* PLAYING */}
-              {gameState === "playing" && q && (
+              {/* PLAYER 1 ANSWER */}
+              {(gameState === "p1-answer" || gameState === "p2-answer") && q && (
                 <motion.div
-                  key={`q-${currentIndex}`}
+                  key={`answer-${currentIndex}-${gameState}`}
                   initial={{ opacity: 0, x: 30 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -30 }}
                   className="space-y-5"
                 >
-                  {/* Scoreboard */}
-                  <div className="flex items-center justify-between bg-muted rounded-xl p-3">
-                    <div className={`text-xs font-bold ${currentPlayerIndex === 0 ? "text-primary" : "text-muted-foreground"}`}>
-                      {players[0].name}: {players[0].score} 🎯
-                    </div>
-                    <div className="text-xs text-muted-foreground">vs</div>
-                    <div className={`text-xs font-bold ${currentPlayerIndex === 1 ? "text-primary" : "text-muted-foreground"}`}>
-                      {players[1].name}: {players[1].score} 🎯
-                    </div>
-                  </div>
-
                   {/* Progress */}
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>Question {currentIndex + 1} of {questions.length}</span>
+                    <span>{matches} 🎯 matches so far</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2">
                     <div
@@ -215,15 +207,15 @@ export default function NewlywedGame() {
                     />
                   </div>
 
-                  {/* Current player turn */}
+                  {/* Whose turn */}
                   <div className="flex justify-center">
                     <motion.span
-                      key={currentPlayerIndex}
+                      key={gameState}
                       initial={{ scale: 0.8, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       className="text-sm font-bold px-4 py-1.5 rounded-full bg-primary/20 text-primary border border-primary/30"
                     >
-                      🎮 {currentPlayer.name}'s Turn
+                      ✍️ {gameState === "p1-answer" ? p1Name : p2Name}, your turn
                     </motion.span>
                   </div>
 
@@ -247,82 +239,142 @@ export default function NewlywedGame() {
                     {q.question}
                   </h3>
 
-                  {/* Options */}
-                  <div className="space-y-3">
-                    {q.options.map((option, i) => (
-                      <motion.button
-                        key={option}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0, transition: { delay: i * 0.1 } }}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleSelect(option)}
-                        className="w-full text-left px-4 py-3 rounded-xl border-2 border-border bg-muted hover:border-primary hover:bg-primary/10 text-foreground text-sm font-medium transition-all"
-                      >
-                        <span className="text-muted-foreground mr-2">{String.fromCharCode(65 + i)}.</span>
-                        {option}
-                      </motion.button>
-                    ))}
-                  </div>
+                  <p className="text-xs text-muted-foreground text-center italic">
+                    Type a short, honest answer. Adjectives count most.
+                  </p>
+
+                  {gameState === "p1-answer" ? (
+                    <>
+                      <textarea
+                        value={p1Answer}
+                        onChange={(e) => setP1Answer(e.target.value.slice(0, MAX_ANSWER_LEN))}
+                        placeholder={`${p1Name}'s answer...`}
+                        rows={3}
+                        className="w-full px-4 py-3 border-2 border-border rounded-xl text-sm bg-muted text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors resize-none"
+                        autoFocus
+                      />
+                      <div className="text-right text-[11px] text-muted-foreground -mt-3">
+                        {p1Answer.length}/{MAX_ANSWER_LEN}
+                      </div>
+                      <div className="flex justify-center">
+                        <motion.button
+                          onClick={submitP1}
+                          disabled={!p1Answer.trim()}
+                          whileHover={{ scale: p1Answer.trim() ? 1.05 : 1 }}
+                          whileTap={{ scale: p1Answer.trim() ? 0.95 : 1 }}
+                          className="bg-gradient-to-r from-primary to-pink-500 text-primary-foreground px-6 py-2.5 rounded-full font-bold text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Lock in & pass to {p2Name} →
+                        </motion.button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground text-center italic">
+                        🤫 {p2Name}, look away until {p1Name} taps the button.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-[11px] text-muted-foreground text-center italic">
+                        🔒 {p1Name}'s answer is locked. No peeking!
+                      </div>
+                      <textarea
+                        value={p2Answer}
+                        onChange={(e) => setP2Answer(e.target.value.slice(0, MAX_ANSWER_LEN))}
+                        placeholder={`${p2Name}'s answer...`}
+                        rows={3}
+                        className="w-full px-4 py-3 border-2 border-border rounded-xl text-sm bg-muted text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors resize-none"
+                        autoFocus
+                      />
+                      <div className="text-right text-[11px] text-muted-foreground -mt-3">
+                        {p2Answer.length}/{MAX_ANSWER_LEN}
+                      </div>
+                      <div className="flex justify-center">
+                        <motion.button
+                          onClick={submitP2}
+                          disabled={!p2Answer.trim()}
+                          whileHover={{ scale: p2Answer.trim() ? 1.05 : 1 }}
+                          whileTap={{ scale: p2Answer.trim() ? 0.95 : 1 }}
+                          className="bg-gradient-to-r from-primary to-pink-500 text-primary-foreground px-6 py-2.5 rounded-full font-bold text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Reveal both answers →
+                        </motion.button>
+                      </div>
+                    </>
+                  )}
                 </motion.div>
               )}
 
               {/* REVEAL */}
-              {gameState === "reveal" && q && (
-                <motion.div
-                  key={`reveal-${currentIndex}`}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="space-y-5"
-                >
-                  {/* Scoreboard */}
-                  <div className="flex items-center justify-between bg-muted rounded-xl p-3">
-                    <div className="text-xs font-bold text-foreground">
-                      {players[0].name}: {players[0].score} 🎯
-                    </div>
-                    <div className="text-xs text-muted-foreground">vs</div>
-                    <div className="text-xs font-bold text-foreground">
-                      {players[1].name}: {players[1].score} 🎯
-                    </div>
-                  </div>
-
-                  <h3 className="text-lg font-bold text-foreground text-center">
-                    {q.question}
-                  </h3>
-
-                  {/* Selected answer */}
-                  <div className="bg-muted rounded-xl p-4 border-2 border-primary/50">
-                    <p className="text-xs text-muted-foreground mb-1">{currentPlayer.name} answered:</p>
-                    <p className="text-sm font-semibold text-foreground">{selectedAnswer}</p>
-                  </div>
-
-                  {/* Comedy reveal */}
+              {gameState === "reveal" && q && results.length > 0 && (() => {
+                const r = results[results.length - 1];
+                const pct = Math.round(r.score * 100);
+                return (
                   <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0, transition: { delay: 0.3 } }}
-                    className="bg-secondary/10 border-2 border-secondary/30 rounded-xl p-4"
+                    key={`reveal-${currentIndex}`}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="space-y-5"
                   >
-                    <p className="text-xs text-secondary font-bold mb-2">🎭 The Real Answer:</p>
-                    <p className="text-sm text-foreground leading-relaxed italic">
-                      {players[currentPlayerIndex].answers[players[currentPlayerIndex].answers.length - 1]?.comedy}
-                    </p>
-                  </motion.div>
+                    <h3 className="text-base font-bold text-foreground text-center leading-snug">
+                      {q.question}
+                    </h3>
 
-                  <div className="flex justify-center pt-2">
-                    <motion.button
-                      onClick={handleNext}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="bg-gradient-to-r from-primary to-pink-500 text-primary-foreground px-6 py-2.5 rounded-full font-bold text-sm shadow-md"
+                    {/* Side-by-side answers */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-muted rounded-xl p-3 border-2 border-primary/40">
+                        <p className="text-[11px] text-muted-foreground mb-1 font-bold uppercase tracking-wider">
+                          {p1Name}
+                        </p>
+                        <p className="text-sm text-foreground">{r.p1Answer}</p>
+                      </div>
+                      <div className="bg-muted rounded-xl p-3 border-2 border-secondary/40">
+                        <p className="text-[11px] text-muted-foreground mb-1 font-bold uppercase tracking-wider">
+                          {p2Name}
+                        </p>
+                        <p className="text-sm text-foreground">{r.p2Answer}</p>
+                      </div>
+                    </div>
+
+                    {/* Similarity badge */}
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1, transition: { delay: 0.2 } }}
+                      className={`rounded-xl p-4 text-center border-2 ${
+                        r.isMatch
+                          ? "bg-primary/10 border-primary/50"
+                          : "bg-muted border-border"
+                      }`}
                     >
-                      {currentIndex + 1 >= questions.length
-                        ? "See Results"
-                        : `Next → ${players[(currentPlayerIndex + 1) % 2].name}'s Turn`}
-                    </motion.button>
-                  </div>
-                </motion.div>
-              )}
+                      <p className="text-xs text-muted-foreground mb-1">Similarity</p>
+                      <p className="text-3xl font-bold text-foreground">{pct}%</p>
+                      <p className="text-sm font-bold mt-1" style={{ color: r.isMatch ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))" }}>
+                        {r.isMatch ? "🎯 Match! +1 point" : "😬 Not quite (need 75%)"}
+                      </p>
+                    </motion.div>
+
+                    {/* Comedy reveal for flavor */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0, transition: { delay: 0.4 } }}
+                      className="bg-secondary/10 border-2 border-secondary/30 rounded-xl p-4"
+                    >
+                      <p className="text-xs text-secondary font-bold mb-2">🎭 The Real Answer™:</p>
+                      <p className="text-sm text-foreground leading-relaxed italic">{r.comedy}</p>
+                    </motion.div>
+
+                    <div className="flex justify-center pt-2">
+                      <motion.button
+                        onClick={handleNext}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="bg-gradient-to-r from-primary to-pink-500 text-primary-foreground px-6 py-2.5 rounded-full font-bold text-sm shadow-md"
+                      >
+                        {currentIndex + 1 >= questions.length ? "See Final Results" : "Next Question →"}
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                );
+              })()}
 
               {/* RESULTS */}
               {gameState === "results" && (
@@ -334,51 +386,49 @@ export default function NewlywedGame() {
                   className="space-y-6 py-4"
                 >
                   <div className="text-center space-y-3">
-                    <div className="text-5xl">{winner ? "🏆" : "🤝"}</div>
+                    <div className="text-5xl">{passedThreshold ? "🏆" : "😅"}</div>
                     <h2 className="text-2xl font-bold text-foreground">
-                      {winner ? `${winner} Wins!` : "It's a Tie!"}
+                      {passedThreshold ? "You really do know each other!" : "Room for growth..."}
                     </h2>
                     <p className="text-sm text-muted-foreground italic">
-                      {winner
-                        ? `${winner} clearly knows their partner better... or got luckier!`
-                        : "You're equally matched — or equally clueless. Either way, it's love! 😂"}
+                      {passedThreshold
+                        ? `You hit ${accuracy}% — above the 75% 'soulmate' threshold.`
+                        : `You scored ${accuracy}%. The 75% threshold is the goal — try again!`}
                     </p>
                   </div>
 
-                  {/* Final scores */}
-                  <div className="flex gap-3">
-                    {players.map((p, i) => (
-                      <div
-                        key={i}
-                        className={`flex-1 text-center p-4 rounded-xl border-2 ${
-                          winner === p.name
-                            ? "border-primary bg-primary/10"
-                            : "border-border bg-muted"
-                        }`}
-                      >
-                        <p className="text-2xl font-bold text-foreground">{p.score}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{p.name}</p>
-                      </div>
-                    ))}
+                  {/* Headline stats */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className={`text-center p-4 rounded-xl border-2 ${passedThreshold ? "border-primary bg-primary/10" : "border-border bg-muted"}`}>
+                      <p className="text-3xl font-bold text-foreground">{accuracy}%</p>
+                      <p className="text-xs text-muted-foreground mt-1">Avg Accuracy</p>
+                    </div>
+                    <div className="text-center p-4 rounded-xl border-2 border-border bg-muted">
+                      <p className="text-3xl font-bold text-foreground">{matches}/{results.length}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Matches (≥75%)</p>
+                    </div>
                   </div>
 
-                  {/* Review per player */}
-                  {players.map((p, pi) => (
-                    <div key={pi}>
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
-                        {p.name}'s Answers
-                      </p>
-                      <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {p.answers.map((a, i) => (
-                          <div key={i} className="bg-muted rounded-xl p-3 text-xs space-y-1">
-                            <p className="font-semibold text-foreground">{a.question}</p>
-                            <p className="text-muted-foreground">Said: {a.picked}</p>
-                            <p className="text-secondary italic">{a.comedy}</p>
+                  {/* Round-by-round */}
+                  <div>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                      Round Breakdown
+                    </p>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {results.map((r, i) => (
+                        <div key={i} className="bg-muted rounded-xl p-3 text-xs space-y-1.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-semibold text-foreground flex-1">{r.question}</p>
+                            <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${r.isMatch ? "bg-primary/20 text-primary" : "bg-border text-muted-foreground"}`}>
+                              {Math.round(r.score * 100)}%
+                            </span>
                           </div>
-                        ))}
-                      </div>
+                          <p className="text-muted-foreground"><span className="font-bold">{p1Name}:</span> {r.p1Answer}</p>
+                          <p className="text-muted-foreground"><span className="font-bold">{p2Name}:</span> {r.p2Answer}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
 
                   <div className="flex justify-center gap-3">
                     <motion.button
