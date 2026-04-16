@@ -70,23 +70,24 @@ export default function TruthOrDare() {
               />
             </div>
 
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-foreground">Spice level</p>
-              <div className="grid grid-cols-3 gap-2">
-                {([1, 2, 3] as const).map((lvl) => (
-                  <button
-                    key={lvl}
-                    onClick={() => setSpice(lvl)}
-                    className={`py-3 rounded-xl text-sm font-bold border transition-all ${
-                      spice === lvl
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-muted text-muted-foreground border-border hover:border-primary/50"
-                    }`}
-                  >
-                    {{ 1: "😇 Mild", 2: "😏 Flirty", 3: "🔥 Spicy" }[lvl]}
-                  </button>
-                ))}
+            <div className="space-y-3">
+              <div className="flex items-baseline justify-between">
+                <p className="text-sm font-semibold text-foreground">Age</p>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-bold text-primary">{age}</span> · {ageLabel}
+                </p>
               </div>
+              <Slider
+                min={18}
+                max={80}
+                step={1}
+                value={[age]}
+                onValueChange={(v) => setAge(v[0])}
+                className="py-2"
+              />
+              <p className="text-xs text-muted-foreground">
+                All prompts stay PG-13. Higher ages unlock more reflective questions.
+              </p>
             </div>
 
             <button
@@ -108,7 +109,7 @@ export default function TruthOrDare() {
           >
             <div className="text-center space-y-1">
               <p className="text-xs uppercase tracking-widest text-muted-foreground">
-                {spiceLabel}
+                {ageLabel} · age {age}
               </p>
               <p className="text-sm text-muted-foreground">It's your turn</p>
               <h2 className="text-3xl font-black text-foreground">{currentName}</h2>
