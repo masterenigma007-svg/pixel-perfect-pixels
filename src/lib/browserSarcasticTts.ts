@@ -63,6 +63,7 @@ function scoreVoice(voice: SpeechSynthesisVoice, direction: Direction, targetNam
   const name = voice.name.toLowerCase();
   const lang = voice.lang.toLowerCase();
   const preferBritishMale = direction === "womenToMen";
+  const preferBritishFemale = direction === "menToWomen";
 
   let score = 0;
   if (targetNames.some((target) => name.includes(target))) score += 10;
@@ -73,6 +74,10 @@ function scoreVoice(voice: SpeechSynthesisVoice, direction: Direction, targetNam
   if (preferBritishMale) {
     if (lang.startsWith("en-gb") || lang.startsWith("en-uk")) score += 14;
     if (BRITISH_MALE_NAMES.some((target) => name.includes(target))) score += 10;
+  } else if (preferBritishFemale) {
+    if (lang.startsWith("en-gb") || lang.startsWith("en-uk")) score += 16;
+    if (BRITISH_FEMALE_NAMES.some((target) => name.includes(target))) score += 12;
+    if (PREMIUM_FEMALE_NAMES.some((target) => name.includes(target))) score += 8;
   } else {
     if (PREMIUM_FEMALE_NAMES.some((target) => name.includes(target))) score += 12;
     if (lang.startsWith("en-us") || lang.startsWith("en-gb")) score += 3;
