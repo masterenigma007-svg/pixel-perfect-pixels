@@ -19,9 +19,15 @@ const FEMALE_NAMES = [
 ];
 
 const MALE_NAMES = [
-  "microsoft david", "microsoft mark", "google uk english male", "male",
-  "daniel", "alex", "tom", "james", "david", "mark", "fred",
-  "guy", "reed", "aaron", "arthur", "oliver", "brian",
+  "microsoft ryan", "microsoft george", "microsoft david", "microsoft mark",
+  "google uk english male", "male", "daniel", "alex", "tom", "james",
+  "david", "mark", "fred", "guy", "reed", "aaron", "arthur",
+  "oliver", "brian", "thomas", "george", "ryan",
+];
+
+const BRITISH_MALE_NAMES = [
+  "google uk english male", "microsoft ryan", "microsoft george",
+  "daniel", "oliver", "arthur", "thomas", "george", "ryan",
 ];
 
 const PREMIUM_KEYWORDS = [
@@ -32,14 +38,24 @@ const ROBOTIC_KEYWORDS = [
   "espeak", "compact", "synth", "festival", "classic", "old", "legacy",
 ];
 
-function scoreVoice(voice: SpeechSynthesisVoice, targetNames: string[]): number {
+function scoreVoice(voice: SpeechSynthesisVoice, direction: Direction, targetNames: string[]): number {
   const name = voice.name.toLowerCase();
+  const lang = voice.lang.toLowerCase();
+  const preferBritishMale = direction === "womenToMen";
+
   let score = 0;
   if (targetNames.some((n) => name.includes(n))) score += 10;
   if (PREMIUM_KEYWORDS.some((k) => name.includes(k))) score += 5;
   if (voice.localService) score += 2;
   if (voice.default) score += 1;
-  if (voice.lang.toLowerCase().startsWith("en-us")) score += 2;
+
+  if (preferBritishMale) {
+    if (lang.startsWith("en-gb") || lang.startsWith("en-uk")) score += 14;
+    if (BRITISH_MALE_NAMES.some((n) => name.includes(n))) score += 10;
+  } else if (lang.startsWith("en-us")) {
+    score += 2;
+  }
+
   if (ROBOTIC_KEYWORDS.some((k) => name.includes(k))) score -= 12;
   return score;
 }
@@ -58,7 +74,7 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
   });
 
   const scored = candidates
-    .map((v) => ({ voice: v, score: scoreVoice(v, targetNames) }))
+    .map((v) => ({ voice: v, score: scoreVoice(v, direction, targetNames) }))
     .sort((a, b) => b.score - a.score);
 
   return scored[0]?.voice || englishVoices[0] || voices[0] || null;
@@ -101,8 +117,8 @@ function getSarcasticProfile(direction: Direction): VoiceProfile {
   if (direction === "menToWomen") {
     return { rate: 0.92, pitch: 1.12, volume: 1.0 };
   }
-  // Male: keep it human and steady; avoid the lower/jittery robotic sound.
-  return { rate: 0.98, pitch: 1.0, volume: 1.0 };
+  // Male: British-leaning, smoother and a touch slower for character without sounding synthetic.
+  return { rate: 0.94, pitch: 0.98, volume: 1.0 };
 }
 
 /**
@@ -229,7 +245,7 @@ export function speakSarcastic(options: SpeakOptions): void {
       utterance.voice = voice;
       utterance.lang = voice.lang;
     } else {
-      utterance.lang = "en-US";
+      utterance.lang = direction === "womenToMen" ? "en-GB" : "en-US";
     }
 
     utterance.onstart = () => {
