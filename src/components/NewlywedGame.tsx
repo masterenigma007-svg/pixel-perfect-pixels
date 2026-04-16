@@ -148,7 +148,7 @@ export default function NewlywedGame() {
                   <h2 className="text-xl font-bold text-foreground">Enter Your Names</h2>
                   <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mx-auto">
                     For each question, <em>both of you</em> type your honest answer.
-                    We compare them — adjectives matter most. 75%+ similar = match!
+                    We compare them — adjectives matter most. Pick a difficulty below!
                   </p>
 
                   <div className="space-y-4 text-left">
