@@ -100,11 +100,19 @@ function weightedTokenSimilarity(t1: string[], t2: string[]): number {
 
 export interface SimilarityResult {
   score: number; // 0..1
-  isMatch: boolean; // score >= 0.75
+  isMatch: boolean;
   sharedAdjectives: string[];
 }
 
-export function compareAnswers(a: string, b: string): SimilarityResult {
+export type Difficulty = "easy" | "medium" | "hard";
+
+export const DIFFICULTY_THRESHOLDS: Record<Difficulty, number> = {
+  easy: 0.5,
+  medium: 0.75,
+  hard: 0.9,
+};
+
+export function compareAnswers(a: string, b: string, threshold = 0.75): SimilarityResult {
   const t1 = tokenize(a);
   const t2 = tokenize(b);
 
@@ -121,7 +129,7 @@ export function compareAnswers(a: string, b: string): SimilarityResult {
 
   return {
     score,
-    isMatch: score >= 0.75,
+    isMatch: score >= threshold,
     sharedAdjectives,
   };
 }
