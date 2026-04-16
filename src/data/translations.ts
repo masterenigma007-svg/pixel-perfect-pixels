@@ -1,19 +1,37 @@
 export type AgeGroup = "teen" | "young-adult" | "adult" | "middle-aged" | "senior";
 export type Direction = "menToWomen" | "womenToMen";
 
-const menToWomenPhrases: Record<AgeGroup, Record<string, string>> = {
+// Values can be a single string or an array of logical variants for the same phrase.
+// When an array is provided, the engine picks one at random — giving ~20% variance
+// while keeping every variant tonally and logically tied to the input phrase.
+type PhraseValue = string | string[];
+
+const menToWomenPhrases: Record<AgeGroup, Record<string, PhraseValue>> = {
   teen: {
-    "I'm fine": "I'm definitely not fine and you should figure out why",
+    "I'm fine": [
+      "I'm definitely not fine and you should figure out why",
+      "I'm not fine but explaining it feels like more work than just being upset",
+      "I'm not fine and the fact that you believed me is part of the problem",
+    ],
     "Nothing's wrong": "Everything is wrong and I'm testing if you care enough to notice",
     "Sure, whatever you want": "I have no opinion but will silently judge your choice later",
     "Do you need help with that?": "You're doing it wrong and I can't watch anymore",
-    "I don't know": "I know but don't want to tell you",
+    "I don't know": [
+      "I know but don't want to tell you",
+      "I know and I'm waiting to see if you guess correctly",
+    ],
     "I'll think about it": "Probably not, but I don't want to hurt your feelings",
     "I'm not hungry": "I'm starving but waiting for you to offer food",
-    "I don't care": "I care very much but don't want to show it",
+    "I don't care": [
+      "I care very much but don't want to show it",
+      "I care a lot and 'I don't care' is the safest way to say so",
+    ],
     "It's up to you": "I want you to choose but will be unhappy with your decision",
     "I'm listening": "I'm thinking about something completely different",
-    "Whatever": "I'm annoyed but don't want to start a fight",
+    "Whatever": [
+      "I'm annoyed but don't want to start a fight",
+      "I'm done arguing but not done being annoyed",
+    ],
     "I don't want to talk about it": "I want you to keep asking until I finally tell you",
     "I'm not mad": "I'm furious and you should know what you did wrong",
     "Can we talk later?": "I'm completely avoiding this conversation forever",
@@ -40,31 +58,56 @@ const menToWomenPhrases: Record<AgeGroup, Record<string, string>> = {
     "Never mind": "Please mind. Keep asking. Don't give up on this.",
     // Comedic tropes
     "I'm going out with the boys": "I will return at 3am smelling like nachos and regret",
-    "I forgot": "I remembered, panicked, and hoped you'd forget too",
+    "I forgot": [
+      "I remembered, panicked, and hoped you'd forget too",
+      "I remembered three times today and somehow forgot all three times",
+    ],
     "It's just a game": "It's the Super Bowl and I've emotionally invested my entire identity in this",
     "I can fix that": "I will make it worse, call my dad, then pretend I fixed it",
     "She's just a friend": "She was a friend before I knew you existed and now I'm terrified",
     "I wasn't looking at her": "I was looking at her and my neck did a full 180",
     "Five more minutes": "Five more minutes means one more episode which means three more hours",
-    "I'm on my way": "I haven't put my shoes on yet",
+    "I'm on my way": [
+      "I haven't put my shoes on yet",
+      "I'm on my way mentally. Physically I'm still searching for keys.",
+    ],
     "That's not what I meant": "That's exactly what I meant but your reaction scared me",
     "Let me explain": "I have no explanation but I need time to invent one",
+    // New additions
+    "I'm not on my phone": "I am very much on my phone and pretending otherwise is part of my brand",
+    "I told you that already": "I thought about telling you and decided that counted",
+    "It's a guy thing": "I cannot explain it but I refuse to apologize for it",
+    "I'll handle it": "I will absolutely not handle it but I needed to end this conversation",
+    "It wasn't that expensive": "It was at least double what you're picturing",
+    "I wasn't ignoring you": "I saw the message, panicked, and hoped time would help",
+    "I'm not avoiding her": "I am strategically rerouting every interaction to avoid her",
+    "I had to work late": "I sat in my car for thirty extra minutes to decompress",
+    "I didn't think you'd mind": "I knew you'd mind and decided to find out how much",
   },
 
   "young-adult": {
-    "I'm fine": "I'm spiraling but won't admit it until I hit a wall",
+    "I'm fine": [
+      "I'm spiraling but won't admit it until I hit a wall",
+      "I'm holding it together with caffeine and denial",
+    ],
     "Nothing's wrong": "Something is definitely wrong but I need you to care enough to dig",
     "Sure, whatever you want": "I'm completely indifferent until you pick the wrong thing",
     "Do you need help with that?": "Please let me take over, this is painful to watch",
     "I don't know": "I have a very strong opinion I'm not ready to share",
-    "I'll think about it": "I've already decided no but I'm sparing your feelings",
+    "I'll think about it": [
+      "I've already decided no but I'm sparing your feelings",
+      "I will not be thinking about it and we both know that",
+    ],
     "I'm not hungry": "I'm hungry but feel guilty about eating so I'm waiting for permission",
     "I don't care": "I care intensely but it's not cool to show it",
     "It's up to you": "I expect you to correctly guess what I actually want",
     "I'm listening": "I caught maybe 30% of what you said",
     "Whatever": "I am very upset and choosing not to escalate right now",
     "I don't want to talk about it": "Give me 20 minutes then bring it up again gently",
-    "I'm not mad": "I am absolutely furious and documenting this for later",
+    "I'm not mad": [
+      "I am absolutely furious and documenting this for later",
+      "I'm not mad. I'm building a slideshow.",
+    ],
     "Can we talk later?": "I need to rehearse this conversation first",
     "That's interesting": "I disagree but I'm too polite to say so right now",
     "I'll do it later": "I'll do it at a time that is entirely inconvenient to you",
@@ -84,7 +127,10 @@ const menToWomenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I'm not jealous": "I noticed every detail of that interaction and filed it accordingly",
     "You look great": "I can see you're struggling and I want you to feel better",
     "I'm fine with whatever movie you want": "I have already decided what I want and I'm testing whether you'll ask",
-    "Never mind": "I will mind for the next 72 hours",
+    "Never mind": [
+      "I will mind for the next 72 hours",
+      "I will absolutely bring this up again at the worst possible moment",
+    ],
     "I didn't say anything": "I communicated an entire novel through tone and expression",
     "I'm not into labels": "I want all the benefits of commitment without the vulnerability of asking for it",
     // Comedic tropes
@@ -99,17 +145,33 @@ const menToWomenPhrases: Record<AgeGroup, Record<string, string>> = {
     "That's not what I meant": "It's exactly what I meant and I'm now doing damage control",
     "Let me think about it": "I'm hoping this problem solves itself if I ignore it long enough",
     "I don't need therapy": "I need therapy desperately but my pride is load-bearing",
+    // New additions
+    "I'll text you back in a sec": "You will hear from me in three to five business days",
+    "I'm not drunk": "I am drunk enough to insist I'm not drunk",
+    "I was going to call my mom": "I was not going to call my mom and now I have to",
+    "I'm working from home today": "I will answer Slack from bed and call it productivity",
+    "I'm being responsible": "I bought groceries and now I think I deserve a medal",
+    "It's not a competition": "It is absolutely a competition and I am quietly winning",
+    "I'm just being honest": "I am being honest in a way that is mostly designed to win the conversation",
+    "I'll start the diet Monday": "Monday is a theoretical concept that may never arrive",
+    "I don't really use social media": "I check it forty times a day but I don't post anymore",
   },
 
   adult: {
-    "I'm fine": "I've been not fine for three days and you just noticed now",
+    "I'm fine": [
+      "I've been not fine for three days and you just noticed now",
+      "I'm fine in the sense that I haven't cried in the last hour",
+    ],
     "Nothing's wrong": "I've been stewing on this for a week and you haven't even asked",
     "Sure, whatever you want": "I've given up having preferences because you never ask",
     "Do you need help with that?": "That is objectively wrong and I am physically restraining myself",
     "I don't know": "I know exactly and I'm waiting to see if you figure it out",
     "I'll think about it": "No, but I love you enough not to crush your enthusiasm",
     "I'm not hungry": "I ate two bites earlier and now I regret it",
-    "I don't care": "I have catalogued every detail of this and will reference it later",
+    "I don't care": [
+      "I have catalogued every detail of this and will reference it later",
+      "I care so much I had to say I don't to keep my composure",
+    ],
     "It's up to you": "You will be wrong and I will remind you next year",
     "I'm listening": "I'm making a grocery list in my head",
     "Whatever": "This conversation is officially over in my mind",
@@ -117,7 +179,10 @@ const menToWomenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I'm not mad": "I've achieved a level of calm that should concern you greatly",
     "Can we talk later?": "I've been thinking about this since Tuesday",
     "That's interesting": "That's factually incorrect and I'll Google it after you leave the room",
-    "I'll do it later": "Later has not been defined and may never arrive",
+    "I'll do it later": [
+      "Later has not been defined and may never arrive",
+      "Later is the polite word for never",
+    ],
     "I was just looking at my phone": "I needed to not be in this conversation for thirty seconds",
     "I don't have a preference": "I do have a preference. I just don't want to be wrong about it.",
     "It's not a big deal": "The individual thing isn't. The pattern it represents very much is.",
@@ -141,7 +206,10 @@ const menToWomenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I'm going out with the boys": "I need 4 hours of doing nothing disguised as socializing",
     "I forgot our anniversary": "I have a recurring calendar reminder that I snoozed 6 times",
     "It's just a game": "My emotional stability is directly tied to this score right now",
-    "I can fix that": "I will spend $200 in tools to avoid a $50 repair bill",
+    "I can fix that": [
+      "I will spend $200 in tools to avoid a $50 repair bill",
+      "I will spend an entire Saturday on something a professional could do in an hour",
+    ],
     "She's just a friend": "She was a friend before marriage and I live in fear of this conversation",
     "I wasn't looking": "I looked. My ancestors looked. It's involuntary and I'm sorry.",
     "Five more minutes": "Five minutes in man-time is 35 minutes in real-time",
@@ -150,6 +218,16 @@ const menToWomenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I don't need to ask for directions": "I have been lost for twenty minutes and I will find my way or die trying",
     "I'm not lost": "I am profoundly lost but I've committed to this route emotionally",
     "Let me just check one thing": "I'm about to disappear into the garage for two hours",
+    // New additions
+    "I'll take care of it": "I will think about taking care of it for several weeks first",
+    "It's under control": "Nothing is under control but admitting that would require a meeting",
+    "I'm not snoring": "I am snoring loudly enough to be heard in adjacent zip codes",
+    "I'll be quick at the store": "I will get sidetracked in the tool aisle for forty minutes",
+    "I read your email": "I opened it, scrolled, and absorbed approximately one keyword",
+    "I don't need a nap": "I am ten minutes from being unconscious in this chair",
+    "I'm watching what I eat": "I am watching it go directly into my mouth without judgment",
+    "I just need to grab one thing": "I am about to vanish into the basement until dinner",
+    "I love your family": "I love you enough to be polite to them and that's a real act of devotion",
   },
 
   "middle-aged": {
@@ -160,12 +238,18 @@ const menToWomenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I don't know": "I've known for 15 years, you just never ask",
     "I'll think about it": "No, and the fact that you're asking tells me you already know that",
     "I'm not hungry": "I ate the kids' leftovers standing over the sink an hour ago",
-    "I don't care": "I care but have run out of energy to prove it",
+    "I don't care": [
+      "I care but have run out of energy to prove it",
+      "I cared in 2008 and I've been coasting on that investment ever since",
+    ],
     "It's up to you": "I've been making every decision for 20 years, enjoy this one",
     "I'm listening": "I heard the first sentence and then the TV got interesting",
     "Whatever": "I'll deal with this alone like I always do",
     "I don't want to talk about it": "I want to talk but not until the kids are in bed",
-    "I'm not mad": "I've transcended anger into something colder and more efficient",
+    "I'm not mad": [
+      "I've transcended anger into something colder and more efficient",
+      "I'm not mad. I'm reorganizing my expectations in real time.",
+    ],
     "Can we talk later?": "I need to not talk to anyone for the next four hours",
     "That's interesting": "We discussed this exact topic in 2011 and you forgot",
     "I'll do it later": "I have 47 other things ahead of that on my list",
@@ -195,15 +279,31 @@ const menToWomenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I can fix that": "I will consult seventeen YouTube videos and still call a professional",
     "The thermostat is fine": "Touch it and we're having a family meeting",
     "I'm not lost": "I've been driving in circles for 25 minutes but I recognize that tree",
-    "I don't need a doctor": "Something has been wrong for six months and I'm hoping it resolves itself",
+    "I don't need a doctor": [
+      "Something has been wrong for six months and I'm hoping it resolves itself",
+      "If I ignore it long enough my body will eventually file a complaint I can't dismiss",
+    ],
     "Let me just rest my eyes": "I will be unconscious in 90 seconds on this couch",
     "I was going to mow the lawn": "I was absolutely not going to mow the lawn until you mentioned it",
     "Back in my day": "I'm about to romanticize a time period that was objectively harder",
     "I'm just going to the hardware store": "I'll be gone for three hours and come back with things we don't need",
+    // New additions
+    "My back is fine": "My back is held together by ibuprofen and stubbornness",
+    "I don't need reading glasses": "I am holding this menu at arm's length like a treasure map",
+    "I'll get to it this weekend": "I will look at it this weekend and add it to next weekend's list",
+    "I'm not getting old": "I just made a sound getting up from a chair and we're going to ignore it",
+    "The grill needs cleaning": "I will offer to clean the grill so I can stand alone outside for an hour",
+    "I'll just have one beer": "I will have one beer and then a second beer that I do not count",
+    "I don't need a nap": "I am about to fall asleep upright in the next eight minutes",
+    "Let me just finish this episode": "I am committing to the next three hours of television",
+    "I should call my brother": "I will think about calling my brother for the next six months",
   },
 
   senior: {
-    "I'm fine": "Everything hurts but at my age 'fine' means still breathing",
+    "I'm fine": [
+      "Everything hurts but at my age 'fine' means still breathing",
+      "Fine is a generous word but it's the one I've chosen for today",
+    ],
     "Nothing's wrong": "So many things are wrong but where would we even begin",
     "Sure, whatever you want": "We've been doing it your way for 40 years, what's one more",
     "Do you need help with that?": "I learned how to do this in 1978 and I'll show you again",
@@ -229,7 +329,10 @@ const menToWomenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I'm just in a mood": "My joints are bad and I haven't said so because I've said so every day this week",
     "I already said sorry": "At this age I've said sorry enough times to have a solid average",
     "I'm not stressed": "I've outlived my stress capacity. What's left is just mild worry.",
-    "I didn't hear you": "I heard you but my response required more thought than the moment allowed",
+    "I didn't hear you": [
+      "I heard you but my response required more thought than the moment allowed",
+      "I heard part of it and I've decided to respond to the part I caught",
+    ],
     "That looks fine": "I have worn glasses for thirty years and I've learned to trust the feeling",
     "I was going to do that": "I wasn't but I appreciate you giving me the dignity of the fiction",
     "I'm not jealous": "At my age jealousy is just too exhausting to maintain",
@@ -250,17 +353,33 @@ const menToWomenPhrases: Record<AgeGroup, Record<string, string>> = {
     "Back in my day": "I'm about to tell a story you've heard forty times and I'm not sorry",
     "Who's that actor": "I will spend the next two hours trying to remember instead of enjoying the movie",
     "I'm just going for a drive": "I'm going to the hardware store to look at things I don't need and talk to strangers",
+    // New additions
+    "I'll just have a small piece": "I will have a small piece and then a second small piece I do not mention",
+    "I'm not turning the TV up": "The TV is now loud enough to be heard by the neighbors",
+    "I don't need a cane": "My pride weighs more than the cane and that's the only reason",
+    "It wasn't that cold out": "I came home with frostbite but I will not admit defeat to a coat",
+    "I'll write it down later": "I will not write it down and I will not remember it",
+    "I'm fine driving at night": "I cannot see a thing but I know this road like family",
+    "I don't need new glasses": "I've been squinting since 1998 and it's part of my personality now",
+    "Let me tell you a quick story": "Settle in. This story has chapters and a soundtrack.",
+    "I don't need a smartphone": "I have one and I refuse to admit I figured out how to use it",
   },
 };
 
-const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
+const womenToMenPhrases: Record<AgeGroup, Record<string, PhraseValue>> = {
   teen: {
-    "We need to talk": "You did something wrong and I've been thinking about it all day",
+    "We need to talk": [
+      "You did something wrong and I've been thinking about it all day",
+      "I have prepared a presentation and you are about to attend it",
+    ],
     "It's fine": "It's not fine but I don't want to discuss it anymore",
     "I'll be ready in 5 minutes": "I'll be ready in 20-30 minutes",
     "Does this make me look fat?": "Tell me I look beautiful no matter what",
     "I'm not upset": "I'm very upset and you should know why",
-    "I don't care": "I care very much and will bring this up later",
+    "I don't care": [
+      "I care very much and will bring this up later",
+      "I care so much that pretending not to is taking actual energy",
+    ],
     "Do whatever you want": "Do what I want or there will be consequences",
     "I'm not hungry": "I'm hungry but will eat whatever you order and then pick from your plate",
     "I don't need anything": "I need many things but expect you to read my mind",
@@ -270,7 +389,10 @@ const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I don't mind": "I mind very much but don't want to seem controlling",
     "Nothing happened": "Something major happened and I'm waiting for you to ask",
     "I'm just tired": "I'm emotionally exhausted and need you to notice without being told",
-    "Never mind, forget it": "Remember it forever because I certainly will",
+    "Never mind, forget it": [
+      "Remember it forever because I certainly will",
+      "Do not forget it. I will be quizzing you on this later.",
+    ],
     "I'm not jealous": "I have tracked that interaction with timestamp-level precision",
     "It's whatever": "It is absolutely not whatever and we will revisit this",
     "You don't have to come": "You should definitely come and the fact that you need this explained concerns me",
@@ -294,15 +416,31 @@ const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I saw the cutest thing today": "Prepare your wallet, I've already bought it",
     "My friend's boyfriend does this": "This is a blueprint. Take notes.",
     "I told my mom about us": "My entire family now has an opinion about you",
-    "I'm not being clingy": "I texted you 14 times because you left me on read for 7 minutes",
+    "I'm not being clingy": [
+      "I texted you 14 times because you left me on read for 7 minutes",
+      "Clingy implies I'm wrong. I'm not wrong.",
+    ],
     "Let's take a cute photo": "We're taking 47 photos until I find one I like",
     "I had the weirdest dream about you": "In this dream you did something wrong and I woke up mad",
     "Are you even listening to me?": "I just told you something important and you said 'that's crazy'",
+    // New additions
+    "I'm not jealous of her": "I have memorized her Instagram down to the cafe she visited last Tuesday",
+    "I just want to be friends": "I do not want to be friends and you should be devastated about it",
+    "Did you see what she posted?": "I have already analyzed it for thirty minutes and need a co-investigator",
+    "I'll be ready in a sec": "Define a sec. Because mine is forty-five minutes.",
+    "I'm not hungry, you go ahead": "I am very hungry but I want you to insist three more times",
+    "I'm not stalking him": "I have his class schedule memorized for purely defensive purposes",
+    "It's not even about that": "It is one hundred percent about that and you should know that",
+    "I'm not mad my friends like you": "I am mad my friends like you and I cannot articulate why",
+    "I trust you, but…": "I trust you but I have a follow-up question that is actually an interrogation",
   },
 
   "young-adult": {
     "We need to talk": "I've been rehearsing this conversation for three days",
-    "It's fine": "It is so not fine. Please ask again. Keep asking.",
+    "It's fine": [
+      "It is so not fine. Please ask again. Keep asking.",
+      "It's fine in the way a controlled fire is fine",
+    ],
     "I'll be ready in 5 minutes": "I'm still in my towel deciding what to wear",
     "Does this look okay?": "I need enthusiastic validation not honest feedback",
     "I'm not upset": "I am upset and you not knowing why is making it worse",
@@ -315,7 +453,10 @@ const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I don't want to talk about it": "I want to talk but I need you to earn it first",
     "I don't mind": "I have a strong preference but feel guilty imposing it",
     "Nothing happened": "Everything happened but I don't know how to start explaining",
-    "I'm just tired": "I'm tired of carrying this alone",
+    "I'm just tired": [
+      "I'm tired of carrying this alone",
+      "I'm tired in a way sleep won't fix",
+    ],
     "Never mind, forget it": "I will not forget it and you should not either",
     "I'm not jealous": "I've checked her Instagram four times in the last hour",
     "It's whatever": "It is objectively not whatever and I resent having to explain that",
@@ -327,7 +468,10 @@ const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I'm not being dramatic": "I've actually underplayed this for your comfort",
     "You should have known": "The signals were there. I've been leaving them for weeks.",
     "I just need a minute": "I need space to decide how much of this I want to unpack",
-    "I've been thinking": "I've been journaling about this and you're about to hear a structured argument",
+    "I've been thinking": [
+      "I've been journaling about this and you're about to hear a structured argument",
+      "I've workshopped this with three friends and now you're getting the final draft",
+    ],
     "Fine, I'll do it myself": "I'm resentful and also capable, which is a terrible combination",
     "I don't want to make it a thing": "I want to make it a thing but I don't want to seem needy",
     "You never listen": "You listen, but only to respond, not to understand",
@@ -347,10 +491,23 @@ const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
     "Are you even listening to me?": "You just said 'yeah totally' to something that required an actual response",
     "I'm manifesting": "I'm wishing very hard for something and I need you to not ruin it with logic",
     "We should do couples therapy": "I need a professional referee because you're not hearing me",
+    // New additions
+    "I'll just have one drink": "I will have one drink and then make several questionable decisions",
+    "I don't need a gift": "I do not need a gift but the absence of one will be remembered forever",
+    "I'm not snooping": "I am gathering evidence in a way I will not describe as snooping",
+    "I'm fine going out with your friends": "I have prepared three exits and one backup plan",
+    "I'm not in a bad mood": "I am in a bad mood and any question will confirm it",
+    "Take your time": "Hurry up. I am timing you.",
+    "I just want to be supportive": "I am being supportive and also keeping receipts",
+    "I'm not mad you played video games": "I am mad you played video games and I will not say it directly",
+    "I'm not insecure, but…": "I am about to be very insecure and need you to handle it correctly",
   },
 
   adult: {
-    "We need to talk": "I've been sleeping on this for a week and I need resolution",
+    "We need to talk": [
+      "I've been sleeping on this for a week and I need resolution",
+      "I have given this enough thought that you cannot improvise your way out",
+    ],
     "It's fine": "Nothing about this is fine and I'm tired of explaining it",
     "I'll be ready in 5 minutes": "I need 15 more minutes but appreciate you not sighing",
     "Does this look okay?": "I want you to look up from your phone and actually see me",
@@ -359,7 +516,10 @@ const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
     "Do whatever you want": "I've stated my preference twice. Figure it out.",
     "I'm not hungry": "I'll have a few bites of yours and then regret I didn't order",
     "I don't need anything": "I need you to notice without me having to ask",
-    "I'm not mad at you": "I'm disappointed, which is worse",
+    "I'm not mad at you": [
+      "I'm disappointed, which is worse",
+      "I'm not mad. I'm reorganizing what I expect from you.",
+    ],
     "I'm fine": "I've accepted that you're not going to ask so I'll manage alone",
     "I don't want to talk about it": "I want to talk but I need to feel heard first",
     "I don't mind": "I actually do mind but I'm picking my battles",
@@ -397,6 +557,16 @@ const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I don't want to be like my mother": "I just did exactly what my mother would do and I need a moment",
     "We need to have people over": "I've already invited them. This is a notification, not a discussion.",
     "I'm fine, really": "I am the furthest thing from fine and 'really' is doing criminal amounts of work",
+    // New additions
+    "I'm not keeping score": "I have a detailed ledger going back to 2017",
+    "I trust you with the kids": "I trust you with the kids and have written a two-page document of instructions",
+    "I'll just rest for five minutes": "I will be unconscious by the third minute and you will need to handle dinner",
+    "I'm not annoyed about the dishes": "I am annoyed about the dishes and the dishes are a metaphor",
+    "It doesn't have to be perfect": "It does have to be perfect and I will redo it after you go to bed",
+    "I'm fine if you go without me": "I am not fine and your answer determines the rest of the weekend",
+    "I'm not making this about me": "I am about to make this about me and it will be justified",
+    "I don't need flowers": "I do not need flowers but the absence of flowers will be noted in detail",
+    "Take your time getting ready": "I have already calculated exactly how late we will be and I am furious about it",
   },
 
   "middle-aged": {
@@ -410,7 +580,10 @@ const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I'm not hungry": "I've been stress-eating all day and now I feel guilty",
     "I don't need anything": "Please just notice without me having to orchestrate it",
     "I'm not mad at you": "I'm running out of emotional bandwidth and that's not your fault",
-    "I'm fine": "I've redefined fine downward to match my current reality",
+    "I'm fine": [
+      "I've redefined fine downward to match my current reality",
+      "Fine is the bar I'm clearing today and I'd like credit for that",
+    ],
     "I don't want to talk about it": "I need to talk but not in the kitchen with the kids around",
     "I don't mind": "I stopped minding things I can't change",
     "Nothing happened": "Something happened but I don't want to get into it tonight",
@@ -442,9 +615,22 @@ const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I'm not being passive aggressive": "I alphabetized the spice rack at midnight. Draw your own conclusions.",
     "The house is a mess": "I cleaned it three hours ago and somehow it looks like a crime scene again",
     "I saw what the neighbors did": "We are now in a home improvement arms race",
-    "Remember when you said...": "I have a photographic memory for promises and a filing system for disappointments",
+    "Remember when you said...": [
+      "I have a photographic memory for promises and a filing system for disappointments",
+      "I have remembered every word and I have receipts",
+    ],
     "I need a girls' weekend": "I need 48 hours of not being anyone's mother, wife, or employee",
     "We should downsize": "I want to throw away your things while keeping all of mine",
+    // New additions
+    "I'm not stressed about the holidays": "I have been stressed about the holidays since August",
+    "It's fine if your mother visits": "It is not fine and I have already started counting the days",
+    "I don't need a spa day": "I desperately need a spa day and I want you to insist",
+    "I'm not snooping in your phone": "I have already read everything and we will discuss it later",
+    "I'll go to bed early tonight": "I will go to bed early and scroll for two hours instead",
+    "I'm fine doing it all myself": "I am quietly building a case I will present at our next argument",
+    "It's not about the money": "It is partly about the money and entirely about respect",
+    "I trust your judgment": "I trust your judgment within a very narrow set of approved outcomes",
+    "I just want one quiet weekend": "I want one quiet weekend a year and I'm not asking for too much",
   },
 
   senior: {
@@ -481,7 +667,10 @@ const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I don't know what I want for dinner": "I want something soft and a quiet evening",
     "Can you just be on my side for once?": "After all this time I still just need you to choose me",
     "It's not a big deal": "At this age you learn very quickly what actually is",
-    "I'm happy for them": "I'm happy for them and grateful for what we have",
+    "I'm happy for them": [
+      "I'm happy for them and grateful for what we have",
+      "I'm happy for them and I've already counted my blessings twice today",
+    ],
     "Do what you want": "I've given you my honest opinion. Now it's yours to carry.",
     // Comedic tropes
     "I have nothing to wear": "Everything fits differently now and I've made peace with elastic waistbands",
@@ -493,10 +682,20 @@ const womenToMenPhrases: Record<AgeGroup, Record<string, string>> = {
     "I need my stories": "Do not speak to me between 1pm and 3pm. This is non-negotiable.",
     "We should travel more": "I want to go somewhere warm and sit in a chair and not move",
     "Call your children": "I already called them. I'm telling you to call them so they hear from both of us.",
+    // New additions
+    "I'm not turning up the heat": "I am wearing three sweaters to prove a point",
+    "I'm fine driving myself": "I am fine driving myself and I will not be discussing my eyesight",
+    "I don't need a hearing aid": "I have one. I refuse to wear it unless cornered.",
+    "I'm not lonely": "I am lonely in a way I am not going to name out loud",
+    "I'll just have a small dessert": "I will have a small dessert and then a second small dessert",
+    "Don't fuss over me": "Please fuss over me. Just do it gently.",
+    "I'm not worried about the doctor": "I am worried about the doctor and I haven't told the children",
+    "I made too much food again": "I made too much on purpose so you'd take some home",
+    "I'm not slowing down": "I am slowing down and I'd rather you not point it out",
   },
 };
 
-export const translations: Record<Direction, Record<AgeGroup, Record<string, string>>> = {
+export const translations: Record<Direction, Record<AgeGroup, Record<string, PhraseValue>>> = {
   menToWomen: menToWomenPhrases,
   womenToMen: womenToMenPhrases,
 };
@@ -522,6 +721,8 @@ export const suggestions: Record<Direction, string[]> = {
     "I'm not lost",
     "Never mind",
     "I'm not jealous",
+    "I'll handle it",
+    "I love your family",
   ],
   womenToMen: [
     "We need to talk",
@@ -540,27 +741,39 @@ export const suggestions: Record<Direction, string[]> = {
     "I had a dream about you",
     "Are you even listening to me?",
     "I'm over it",
+    "I'm not keeping score",
+    "Take your time",
   ],
 };
+
+// Pick a logical variant from a phrase entry. Single strings return as-is.
+// Arrays are randomly sampled, giving the translator a ~20% feel of variance
+// while every option is hand-written to fit the input phrase.
+function pickVariant(value: PhraseValue): string {
+  if (Array.isArray(value)) {
+    return value[Math.floor(Math.random() * value.length)];
+  }
+  return value;
+}
 
 export function translate(text: string, direction: Direction, ageGroup: AgeGroup): string {
   const dict = translations[direction][ageGroup];
   const trimmed = text.trim();
 
   if (dict[trimmed]) {
-    return dict[trimmed];
+    return pickVariant(dict[trimmed]);
   }
 
   const lower = trimmed.toLowerCase();
   for (const [key, value] of Object.entries(dict)) {
     if (key.toLowerCase() === lower) {
-      return value;
+      return pickVariant(value);
     }
   }
 
   for (const [key, value] of Object.entries(dict)) {
     if (lower.includes(key.toLowerCase())) {
-      return value;
+      return pickVariant(value);
     }
   }
 
