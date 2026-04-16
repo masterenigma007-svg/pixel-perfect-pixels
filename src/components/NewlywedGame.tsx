@@ -392,7 +392,7 @@ export default function NewlywedGame() {
                       <p className="text-xs text-muted-foreground mb-1">Similarity</p>
                       <p className="text-3xl font-bold text-foreground">{pct}%</p>
                       <p className="text-sm font-bold mt-1" style={{ color: r.isMatch ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))" }}>
-                        {r.isMatch ? "🎯 Match! +1 point" : "😬 Not quite (need 75%)"}
+                        {r.isMatch ? "🎯 Match! +1 point" : `😬 Not quite (need ${thresholdPct}%)`}
                       </p>
                     </motion.div>
 
