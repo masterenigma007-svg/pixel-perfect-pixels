@@ -309,9 +309,9 @@ Deno.serve(async (req) => {
 
     console.log(`[female-tts] cache MISS ${hash.slice(0, 8)} — generating`);
 
-    // Provider chain: StreamElements (free, human Polly Joanna) → ElevenLabs → Google fallback
+    // Provider chain: VoiceRSS (free demo, human "Linda") → ElevenLabs → Google fallback
     const providers: Array<{ name: string; fn: () => Promise<Uint8Array | null> }> = [
-      { name: "streamelements", fn: () => fetchStreamElementsTts(text) },
+      { name: "voicerss", fn: () => fetchVoiceRss(text) },
       { name: "elevenlabs", fn: () => fetchElevenLabs(text) },
     ];
 
