@@ -62,7 +62,7 @@ Xcode will open. Then:
 1. Go to https://appstoreconnect.apple.com → **My Apps → +** → New App.
 2. Fill: name, primary language (English), bundle ID, SKU.
 3. **App Information**: category = *Entertainment* (subcategory *Lifestyle* works too).
-4. **Age Rating**: this app has Truth-or-Dare adult prompts → mark **17+** (Frequent/Intense Sexual Content & Nudity = *Infrequent/Mild*, Mature/Suggestive Themes = *Frequent*).
+4. **Age Rating**: Truth-or-Dare prompts are PG-13. Mark **12+** (Mature/Suggestive Themes = *Infrequent/Mild*, no sexual content, no nudity).
 5. **Pricing**: Free.
 6. **Privacy**: declare you collect *no* user data (everything is local-storage only). Privacy policy URL required → host a simple one (see `PRIVACY.md` template below).
 7. Add screenshots: **6.7" iPhone (1290×2796)** and **6.5" iPhone (1242×2688)**. Take from a simulator with `Cmd+S`.
@@ -94,7 +94,7 @@ Android Studio opens. Then:
 1. https://play.google.com/console → **Create app**.
 2. Default language = English (US), app name = `Relationship Saver`, type = App, Free.
 3. Complete the **Dashboard** checklist:
-   - **App content**: privacy policy URL, ads = No, content rating questionnaire (mark mature themes for Truth/Dare → expect *Mature 17+*), target audience = 18+, data safety = "no data collected".
+   - **App content**: privacy policy URL, ads = No, content rating questionnaire (suggestive themes only, no sex/nudity → expect *Teen*), target audience = 13+, data safety = "no data collected".
    - **Store listing**: short description (80 chars), full description (4000 chars), 2 screenshots min (phone 1080×1920+), feature graphic (1024×500), app icon (512×512).
 4. **Production → Create new release** → upload `.aab` → roll out.
 
@@ -118,7 +118,7 @@ Sample text:
 - [ ] Replace placeholder app icons with real branded 1024×1024 (iOS) and 512×512 (Android) icons.
 - [ ] Take 4–6 screenshots on a real device or simulator for each store.
 - [ ] Host a privacy policy and have its URL ready.
-- [ ] Truth-or-Dare adult content → both stores will rate **17+/Mature** — be honest in the questionnaire.
+- [ ] Truth-or-Dare prompts are PG-13 → both stores will rate **12+/Teen**.
 - [ ] Test on a real device: `npx cap run ios` / `npx cap run android`.
 
 ---
