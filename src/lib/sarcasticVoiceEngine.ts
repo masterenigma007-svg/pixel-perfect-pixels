@@ -49,26 +49,6 @@ export function speakSarcastic(options: SpeakOptions): void {
     }
   };
 
-  if (direction === "menToWomen") {
-    void speakWithOfflineFemaleVoice({
-      text: processedText,
-      onStart,
-      onEnd: () => finalizePlayback(onEnd),
-      onError: browserFallback,
-    }).then((handle) => {
-      if (sessionId !== playbackSessionId) {
-        handle?.stop();
-        return;
-      }
-
-      if (handle) {
-        activePlayback = handle;
-      }
-    });
-
-    return;
-  }
-
   activePlayback = speakWithBrowserTts({
     text: processedText,
     direction,
