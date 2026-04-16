@@ -5,7 +5,7 @@ import GenderTranslator from "@/components/GenderTranslator";
 import NewlywedGame from "@/components/NewlywedGame";
 import TruthOrDare from "@/components/TruthOrDare";
 import translatorIcon from "@/assets/translator-hero.jpg";
-import newlywedIcon from "@/assets/compatibility-hero.jpg";
+import newlywedIcon from "@/assets/compatibility-hero.gif";
 import truthOrDareIcon from "@/assets/truthordare-hero.jpg";
 
 type Tab = "translator" | "game" | "tod";
