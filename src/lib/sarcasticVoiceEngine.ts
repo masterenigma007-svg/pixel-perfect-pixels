@@ -124,9 +124,9 @@ interface VoiceProfile {
 
 function getSarcasticProfile(direction: Direction): VoiceProfile {
   if (direction === "menToWomen") {
-    // Natural female delivery: slightly slower than normal for sass,
-    // pitch just above neutral so it sounds warm and human, not chipmunk.
-    return { rate: 0.96, pitch: 1.04, volume: 1.0 };
+    // About 15% less robotic: slightly slower, lower, steadier female delivery.
+    // This keeps the sass but removes the synthetic brightness.
+    return { rate: 0.94, pitch: 1.0, volume: 1.0 };
   }
   // Male British-leaning sarcastic delivery:
   // - rate 0.9 = unhurried, dry
