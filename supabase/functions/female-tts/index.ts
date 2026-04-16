@@ -145,6 +145,39 @@ async function fetchElevenLabs(text: string): Promise<Uint8Array | null> {
   }
 }
 
+// ── StreamElements TTS (FREE, no key, real neural voices) ────
+// Uses Amazon Polly voices via StreamElements' public endpoint.
+// "Joanna" = warm, natural American female (Polly Neural).
+async function fetchStreamElementsTts(text: string): Promise<Uint8Array | null> {
+  try {
+    const url =
+      "https://api.streamelements.com/kappa/v2/speech?voice=Joanna&text=" +
+      encodeURIComponent(text);
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "audio/mpeg, */*",
+      },
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`[female-tts] StreamElements ${res.status}: ${errText}`);
+      return null;
+    }
+    const buf = new Uint8Array(await res.arrayBuffer());
+    if (buf.length < 500) {
+      console.warn(`[female-tts] StreamElements returned suspiciously small payload: ${buf.length} bytes`);
+      return null;
+    }
+    return buf;
+  } catch (err) {
+    console.warn("[female-tts] StreamElements exception:", err);
+    return null;
+  }
+}
+
 // ── Google fallback ───────────────────────────────────────────
 function chunkText(text: string): string[] {
   const clean = text.replace(/\s+/g, " ").trim();
@@ -245,9 +278,9 @@ Deno.serve(async (req) => {
 
     console.log(`[female-tts] cache MISS ${hash.slice(0, 8)} — generating`);
 
-    // Provider chain: ElevenLabs → Google fallback
-    // (Lovable AI Gateway does not support TTS — only chat/image models)
+    // Provider chain: StreamElements (free, human Polly Joanna) → ElevenLabs → Google fallback
     const providers: Array<{ name: string; fn: () => Promise<Uint8Array | null> }> = [
+      { name: "streamelements", fn: () => fetchStreamElementsTts(text) },
       { name: "elevenlabs", fn: () => fetchElevenLabs(text) },
     ];
 
