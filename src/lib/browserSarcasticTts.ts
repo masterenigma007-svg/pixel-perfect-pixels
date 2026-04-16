@@ -109,7 +109,8 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
 
 function getSarcasticProfile(direction: Direction): VoiceProfile {
   if (direction === "menToWomen") {
-    return { rate: 0.97, pitch: 0.95, volume: 1.0 };
+    // Slightly slower, slightly lower pitch — natural British female cadence, less synthetic edge.
+    return { rate: 0.92, pitch: 0.98, volume: 1.0 };
   }
 
   return { rate: 0.9, pitch: 1.05, volume: 1.0 };
