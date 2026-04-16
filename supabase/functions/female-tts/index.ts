@@ -1,11 +1,12 @@
-// Edge function: returns MP3 audio for a given text using a high-quality
-// British female voice. Tries ElevenLabs first (studio-quality, sarcastic-friendly
-// British female voice), and falls back to Google Translate's public TTS endpoint
-// if ElevenLabs is unavailable, rate-limited, or out of credits.
+// Edge function: returns MP3 audio for a given text using Microsoft Edge TTS.
+// Voice: en-GB-SoniaNeural — expressive British female. Free, no API key,
+// no quota. Falls back to Google Translate's public TTS if Edge TTS fails.
 
-// ElevenLabs voice: "Charlotte" — warm, expressive British female. Great for sarcasm.
-const ELEVENLABS_VOICE_ID = "XB0fDUnXU5powFXDhCwa"; // Charlotte
-const ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5"; // Low-latency, high quality
+const EDGE_VOICE = "Microsoft Server Speech Text to Speech Voice (en-GB, SoniaNeural)";
+// Sarcastic-friendly prosody: slightly slower, slightly lower pitch, more expressive.
+const EDGE_RATE = "-6%";
+const EDGE_PITCH = "-2%";
+const EDGE_STYLE = "newscast"; // Sonia supports: cheerful, sad, angry, newscast, etc.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +15,162 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const MAX_CHUNK = 190; // Google TTS endpoint limit per request
+const MAX_CHUNK = 190; // Google TTS endpoint limit per request (fallback only)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Microsoft Edge TTS (free, no API key, neural voices)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const TRUSTED_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
+
+function uuid(): string {
+  return crypto.randomUUID().replace(/-/g, "");
+}
+
+function buildSSML(text: string): string {
+  // Escape XML special chars in the text
+  const safe = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+
+  return (
+    `<speak version='1.0' xml:lang='en-GB' xmlns='http://www.w3.org/2001/10/synthesis' ` +
+    `xmlns:mstts='https://www.w3.org/2001/mstts'>` +
+    `<voice name='${EDGE_VOICE}'>` +
+    `<mstts:express-as style='${EDGE_STYLE}' styledegree='1.5'>` +
+    `<prosody rate='${EDGE_RATE}' pitch='${EDGE_PITCH}'>${safe}</prosody>` +
+    `</mstts:express-as>` +
+    `</voice></speak>`
+  );
+}
+
+async function fetchEdgeTts(text: string): Promise<Uint8Array | null> {
+  return await new Promise((resolve) => {
+    try {
+      const connectionId = uuid();
+      const wsUrl =
+        `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1` +
+        `?TrustedClientToken=${TRUSTED_TOKEN}` +
+        `&ConnectionId=${connectionId}`;
+
+      const ws = new WebSocket(wsUrl);
+      ws.binaryType = "arraybuffer";
+
+      const audioChunks: Uint8Array[] = [];
+      let settled = false;
+
+      const timeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        console.warn("[female-tts] Edge TTS timeout");
+        try { ws.close(); } catch { /* noop */ }
+        resolve(null);
+      }, 15000);
+
+      const finish = (result: Uint8Array | null) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        try { ws.close(); } catch { /* noop */ }
+        resolve(result);
+      };
+
+      ws.onopen = () => {
+        const now = new Date().toISOString();
+        // 1. Speech config
+        const config =
+          `X-Timestamp:${now}\r\n` +
+          `Content-Type:application/json; charset=utf-8\r\n` +
+          `Path:speech.config\r\n\r\n` +
+          JSON.stringify({
+            context: {
+              synthesis: {
+                audio: {
+                  metadataoptions: {
+                    sentenceBoundaryEnabled: "false",
+                    wordBoundaryEnabled: "false",
+                  },
+                  outputFormat: "audio-24khz-48kbitrate-mono-mp3",
+                },
+              },
+            },
+          });
+        ws.send(config);
+
+        // 2. SSML request
+        const ssml = buildSSML(text);
+        const ssmlMsg =
+          `X-RequestId:${connectionId}\r\n` +
+          `Content-Type:application/ssml+xml\r\n` +
+          `X-Timestamp:${now}\r\n` +
+          `Path:ssml\r\n\r\n${ssml}`;
+        ws.send(ssmlMsg);
+      };
+
+      ws.onmessage = (event) => {
+        if (typeof event.data === "string") {
+          if (event.data.includes("Path:turn.end")) {
+            // Concatenate chunks
+            const total = audioChunks.reduce((n, c) => n + c.length, 0);
+            if (total === 0) {
+              finish(null);
+              return;
+            }
+            const out = new Uint8Array(total);
+            let offset = 0;
+            for (const c of audioChunks) {
+              out.set(c, offset);
+              offset += c.length;
+            }
+            finish(out);
+          }
+        } else {
+          // Binary frame: header (text) + 0x00 + audio bytes
+          // Format: 2 bytes (header length BE) + header + audio
+          const buf = new Uint8Array(event.data as ArrayBuffer);
+          if (buf.length < 2) return;
+          const headerLen = (buf[0] << 8) | buf[1];
+          const audioStart = 2 + headerLen;
+          if (audioStart >= buf.length) return;
+          audioChunks.push(buf.slice(audioStart));
+        }
+      };
+
+      ws.onerror = (err) => {
+        console.warn("[female-tts] Edge TTS ws error:", err);
+        finish(null);
+      };
+
+      ws.onclose = () => {
+        if (!settled) {
+          // Closed before turn.end — finalize with whatever we have
+          const total = audioChunks.reduce((n, c) => n + c.length, 0);
+          if (total > 0) {
+            const out = new Uint8Array(total);
+            let offset = 0;
+            for (const c of audioChunks) {
+              out.set(c, offset);
+              offset += c.length;
+            }
+            finish(out);
+          } else {
+            finish(null);
+          }
+        }
+      };
+    } catch (err) {
+      console.warn("[female-tts] Edge TTS exception:", err);
+      resolve(null);
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Google Translate TTS fallback (chunked, public endpoint)
+// ─────────────────────────────────────────────────────────────────────────────
 
 function chunkText(text: string): string[] {
   const clean = text.replace(/\s+/g, " ").trim();
@@ -34,7 +190,6 @@ function chunkText(text: string): string[] {
       if (s.length <= MAX_CHUNK) {
         current = s;
       } else {
-        // Hard-split very long sentence on word boundaries
         const words = s.split(" ");
         let buf = "";
         for (const w of words) {
@@ -53,63 +208,12 @@ function chunkText(text: string): string[] {
   return parts;
 }
 
-async function fetchElevenLabs(text: string): Promise<Uint8Array | null> {
-  const apiKey = Deno.env.get("ELEVENLABS_API_KEY");
-  console.log(`[female-tts] ElevenLabs key present: ${!!apiKey}, len: ${apiKey?.length ?? 0}`);
-  if (!apiKey) {
-    console.warn("[female-tts] ELEVENLABS_API_KEY missing — using Google fallback");
-    return null;
-  }
-
-  try {
-    const res = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}?output_format=mp3_44100_128`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": apiKey,
-          "Content-Type": "application/json",
-          "Accept": "audio/mpeg",
-        },
-        body: JSON.stringify({
-          text,
-          model_id: ELEVENLABS_MODEL_ID,
-          voice_settings: {
-            // Lower stability + higher style = more expressive, sarcastic delivery
-            stability: 0.35,
-            similarity_boost: 0.8,
-            style: 0.65,
-            use_speaker_boost: true,
-            speed: 0.96,
-          },
-        }),
-      }
-    );
-
-    console.log(`[female-tts] ElevenLabs response status: ${res.status}`);
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      console.warn(`[female-tts] ElevenLabs failed [${res.status}]: ${errText}`);
-      return null;
-    }
-
-    const buf = new Uint8Array(await res.arrayBuffer());
-    console.log(`[female-tts] ElevenLabs returned ${buf.length} bytes`);
-    return buf;
-  } catch (err) {
-    console.warn("[female-tts] ElevenLabs request error:", err);
-    return null;
-  }
-}
-
-async function fetchChunk(text: string): Promise<Uint8Array> {
+async function fetchGoogleChunk(text: string): Promise<Uint8Array> {
   const url =
     "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-GB&q=" +
     encodeURIComponent(text);
   const res = await fetch(url, {
     headers: {
-      // Spoof a desktop UA — required, otherwise Google returns 403.
       "User-Agent":
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
         "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -117,11 +221,8 @@ async function fetchChunk(text: string): Promise<Uint8Array> {
       "Accept": "audio/mpeg, */*",
     },
   });
-  if (!res.ok) {
-    throw new Error(`Upstream TTS failed: ${res.status}`);
-  }
-  const buf = new Uint8Array(await res.arrayBuffer());
-  return buf;
+  if (!res.ok) throw new Error(`Google TTS failed: ${res.status}`);
+  return new Uint8Array(await res.arrayBuffer());
 }
 
 function concatMp3(chunks: Uint8Array[]): Uint8Array {
@@ -134,6 +235,10 @@ function concatMp3(chunks: Uint8Array[]): Uint8Array {
   }
   return out;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HTTP handler
+// ─────────────────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -152,21 +257,25 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Try ElevenLabs first — handles full text in one request (up to ~5000 chars).
-    const elevenAudio = await fetchElevenLabs(text);
-    if (elevenAudio && elevenAudio.length > 0) {
-      return new Response(elevenAudio, {
+    // Try Microsoft Edge TTS first — neural Sonia voice, much more human.
+    console.log(`[female-tts] Trying Edge TTS for ${text.length} chars`);
+    const edgeAudio = await fetchEdgeTts(text);
+    if (edgeAudio && edgeAudio.length > 0) {
+      console.log(`[female-tts] Edge TTS success: ${edgeAudio.length} bytes`);
+      return new Response(edgeAudio, {
         status: 200,
         headers: {
           ...corsHeaders,
           "Content-Type": "audio/mpeg",
           "Cache-Control": "public, max-age=86400",
-          "X-TTS-Provider": "elevenlabs",
+          "X-TTS-Provider": "edge-tts",
         },
       });
     }
 
-    // Fallback: Google Translate TTS (chunked).
+    console.warn("[female-tts] Edge TTS failed, falling back to Google");
+
+    // Fallback: Google Translate TTS
     const chunks = chunkText(text);
     if (!chunks.length) {
       return new Response(JSON.stringify({ error: "Empty text" }), {
@@ -174,10 +283,9 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
     const audioBuffers: Uint8Array[] = [];
     for (const chunk of chunks) {
-      audioBuffers.push(await fetchChunk(chunk));
+      audioBuffers.push(await fetchGoogleChunk(chunk));
     }
     const merged = concatMp3(audioBuffers);
 
@@ -187,10 +295,11 @@ Deno.serve(async (req) => {
         ...corsHeaders,
         "Content-Type": "audio/mpeg",
         "Cache-Control": "public, max-age=86400",
+        "X-TTS-Provider": "google-fallback",
       },
     });
   } catch (err) {
-    console.error("female-tts error:", err);
+    console.error("[female-tts] error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
