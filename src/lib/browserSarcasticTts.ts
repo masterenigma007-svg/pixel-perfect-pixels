@@ -92,6 +92,26 @@ function isBritishFemaleVoice(voice: SpeechSynthesisVoice): boolean {
   );
 }
 
+/**
+ * Inserts subtle natural pauses and breath cues so the female TTS voice reads
+ * with a more human cadence — short pauses after commas, longer after sentence
+ * endings, and a tiny lilt before conjunctions.
+ */
+function humanizeFemaleCadence(text: string): string {
+  return text
+    // Slight breath after sentence endings.
+    .replace(/([.!?])\s+/g, "$1… ")
+    // Brief pause after commas, semicolons, colons.
+    .replace(/([,;:])\s+/g, "$1, ")
+    // Soften em-dashes into a spoken pause.
+    .replace(/\s—\s/g, ", … ")
+    // Tiny lift before common conjunctions to break monotone delivery.
+    .replace(/\b(and|but|so|because|though|although)\b/gi, ", $1")
+    // Collapse any accidental double spaces.
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function scoreVoice(voice: SpeechSynthesisVoice, direction: Direction, targetNames: string[]): number {
   const name = voice.name.toLowerCase();
   const lang = voice.lang.toLowerCase();
@@ -159,8 +179,8 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
 function getSarcasticProfile(direction: Direction, voice: SpeechSynthesisVoice | null): VoiceProfile {
   if (direction === "menToWomen") {
     return isNeuralVoice(voice as SpeechSynthesisVoice)
-      ? { rate: 0.97, pitch: 1.01, volume: 1.0 }
-      : { rate: 1.0, pitch: 1.08, volume: 1.0 };
+      ? { rate: 1.0, pitch: 1.0, volume: 1.0 }
+      : { rate: 1.02, pitch: 1.05, volume: 1.0 };
   }
 
   return { rate: 0.9, pitch: 1.05, volume: 1.0 };
@@ -172,7 +192,8 @@ export function speakWithBrowserTts(options: BrowserSpeakOptions): SpeechPlaybac
 
   const voice = selectVoice(direction);
   const profile = getSarcasticProfile(direction, voice);
-  const utterance = new SpeechSynthesisUtterance(text);
+  const spokenText = direction === "menToWomen" ? humanizeFemaleCadence(text) : text;
+  const utterance = new SpeechSynthesisUtterance(spokenText);
 
   let stopped = false;
 
