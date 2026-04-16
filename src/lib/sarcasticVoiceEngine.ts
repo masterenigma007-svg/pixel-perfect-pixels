@@ -202,20 +202,20 @@ export function speakSarcastic(options: SpeakOptions): void {
       return;
     }
 
-    const chunk = chunks[index];
+    const { text: chunkText, pauseAfterMs } = chunks[index];
     const position = index / Math.max(1, chunks.length - 1);
 
     // Natural prosody contour: start neutral, peak mid, fall at the end
     const arc = Math.sin(position * Math.PI);
     const jitter = (Math.random() - 0.5) * 0.08;
-    const pitchOffset = arc * 0.12 + jitter;
-    const rateJitter = (Math.random() - 0.5) * 0.06;
+    const pitchOffset = arc * 0.1 + jitter;
+    const rateJitter = (Math.random() - 0.5) * 0.05;
 
-    // Sarcastic deadpan: drop pitch hard on chunks ending with a period
-    const isDeadpanEnd = /[.]\s*$/.test(chunk);
-    const pitchAdjust = isDeadpanEnd ? -0.1 : pitchOffset;
+    // Last chunk = deadpan drop
+    const isLast = index === chunks.length - 1;
+    const pitchAdjust = isLast ? -0.08 : pitchOffset;
 
-    const utterance = new SpeechSynthesisUtterance(chunk);
+    const utterance = new SpeechSynthesisUtterance(chunkText);
     utterance.volume = profile.volume;
     utterance.pitch = Math.max(0.1, Math.min(2, profile.pitch + pitchAdjust));
     utterance.rate = Math.max(0.5, Math.min(1.4, profile.rate + rateJitter));
@@ -232,7 +232,7 @@ export function speakSarcastic(options: SpeakOptions): void {
     };
     utterance.onend = () => {
       index += 1;
-      setTimeout(speakChunk, isDeadpanEnd ? 220 : 60);
+      setTimeout(speakChunk, pauseAfterMs);
     };
     utterance.onerror = (e) => {
       activeChain = null;
