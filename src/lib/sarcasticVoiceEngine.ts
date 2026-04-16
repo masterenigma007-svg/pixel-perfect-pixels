@@ -219,13 +219,8 @@ export function speakSarcastic(options: SpeakOptions): void {
     },
   };
 
-  try {
-    const ctx = getAudioContext();
-    if (ctx.state === "suspended") void ctx.resume();
-    createVoiceProcessingChain(ctx, direction);
-  } catch {
-    /* noop */
-  }
+  // Note: speechSynthesis audio is not routable through WebAudio in browsers,
+  // so we no longer build an EQ chain — it added nothing but overhead.
 
   chunks.forEach((chunkText, index) => {
     const utterance = new SpeechSynthesisUtterance(chunkText);
