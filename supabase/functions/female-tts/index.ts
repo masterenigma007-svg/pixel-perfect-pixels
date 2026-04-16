@@ -15,11 +15,18 @@ const MAX_CHUNK = 190;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY") ?? "";
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") ?? "";
 const BUCKET = "tts-cache";
 
 // Sarah — warm, expressive, slightly sarcastic-friendly female voice
 const ELEVEN_VOICE_ID = "EXAVITQu4vr4xnSDxMaL";
 const ELEVEN_MODEL = "eleven_turbo_v2_5";
+
+// Lovable AI Gateway → OpenAI TTS (free during promo, no extra key needed)
+// "shimmer" = warm, expressive female; great for sarcastic delivery
+const LOVABLE_TTS_URL = "https://ai.gateway.lovable.dev/v1/audio/speech";
+const LOVABLE_TTS_MODEL = "gpt-4o-mini-tts";
+const LOVABLE_TTS_VOICE = "shimmer";
 
 async function sha256Hex(text: string): Promise<string> {
   const data = new TextEncoder().encode(text);
@@ -57,6 +64,44 @@ async function cachePut(path: string, audio: Uint8Array): Promise<void> {
     const message = await res.text();
     console.warn(`[female-tts] cache upload failed ${res.status}: ${message}`);
     throw new Error(`Cache upload failed: ${res.status}`);
+  }
+}
+
+// ── Lovable AI Gateway (OpenAI TTS, free, no extra key) ──────
+async function fetchLovableTts(text: string): Promise<Uint8Array | null> {
+  if (!LOVABLE_API_KEY) {
+    console.warn("[female-tts] LOVABLE_API_KEY not set");
+    return null;
+  }
+  try {
+    const res = await fetch(LOVABLE_TTS_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+        Accept: "audio/mpeg",
+      },
+      body: JSON.stringify({
+        model: LOVABLE_TTS_MODEL,
+        voice: LOVABLE_TTS_VOICE,
+        input: text,
+        response_format: "mp3",
+        // Slightly slower for deliberate, sardonic cadence
+        speed: 0.95,
+        // Steer the delivery toward warm, knowing sarcasm
+        instructions:
+          "Speak in a warm, witty, knowingly sarcastic female voice. Slightly amused, like you're gently teasing a partner. Natural human inflection, not robotic. Conversational pacing with subtle dry humor.",
+      }),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`[female-tts] Lovable TTS ${res.status}: ${errText}`);
+      return null;
+    }
+    return new Uint8Array(await res.arrayBuffer());
+  } catch (err) {
+    console.warn("[female-tts] Lovable TTS exception:", err);
+    return null;
   }
 }
 
@@ -200,35 +245,42 @@ Deno.serve(async (req) => {
 
     console.log(`[female-tts] cache MISS ${hash.slice(0, 8)} — generating`);
 
-    // Try ElevenLabs first
-    const elevenAudio = await fetchElevenLabs(text);
-    if (elevenAudio && elevenAudio.length > 0) {
-      console.log(`[female-tts] ElevenLabs success: ${elevenAudio.length} bytes`);
-      try {
-        await cachePut(path, elevenAudio);
-        return new Response(JSON.stringify({ url, cached: false }), {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-            "X-TTS-Provider": "elevenlabs",
-          },
-        });
-      } catch (cacheError) {
-        console.warn("[female-tts] ElevenLabs cached failed; streaming direct", cacheError);
-        return new Response(elevenAudio, {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "audio/mpeg",
-            "Cache-Control": "no-store",
-            "X-TTS-Provider": "elevenlabs-direct",
-          },
-        });
+    // Provider chain: ElevenLabs → Google fallback
+    // (Lovable AI Gateway does not support TTS — only chat/image models)
+    const providers: Array<{ name: string; fn: () => Promise<Uint8Array | null> }> = [
+      { name: "elevenlabs", fn: () => fetchElevenLabs(text) },
+    ];
+
+    for (const provider of providers) {
+      const audio = await provider.fn();
+      if (audio && audio.length > 0) {
+        console.log(`[female-tts] ${provider.name} success: ${audio.length} bytes`);
+        try {
+          await cachePut(path, audio);
+          return new Response(JSON.stringify({ url, cached: false }), {
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+              "X-TTS-Provider": provider.name,
+            },
+          });
+        } catch (cacheError) {
+          console.warn(`[female-tts] ${provider.name} cache failed; streaming direct`, cacheError);
+          return new Response(audio, {
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "audio/mpeg",
+              "Cache-Control": "no-store",
+              "X-TTS-Provider": `${provider.name}-direct`,
+            },
+          });
+        }
       }
     }
 
-    console.warn("[female-tts] ElevenLabs failed; using Google fallback");
+    console.warn("[female-tts] All premium providers failed; using Google fallback");
     const chunks = chunkText(text);
     if (!chunks.length) {
       return new Response(JSON.stringify({ error: "Empty text" }), {
