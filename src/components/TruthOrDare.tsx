@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TRUTHS, DARES, pickRandom, type TodPrompt } from "@/data/truthOrDarePrompts";
+import { Slider } from "@/components/ui/slider";
 
 type Stage = "setup" | "choose" | "prompt";
 
@@ -8,7 +9,7 @@ export default function TruthOrDare() {
   const [stage, setStage] = useState<Stage>("setup");
   const [p1, setP1] = useState("");
   const [p2, setP2] = useState("");
-  const [spice, setSpice] = useState<1 | 2 | 3>(2);
+  const [age, setAge] = useState<number>(25);
   const [turn, setTurn] = useState(0); // 0 = p1, 1 = p2
   const [current, setCurrent] = useState<{ kind: "Truth" | "Dare"; prompt: TodPrompt } | null>(null);
 
@@ -22,7 +23,7 @@ export default function TruthOrDare() {
   };
 
   const pick = (kind: "Truth" | "Dare") => {
-    const prompt = pickRandom(kind === "Truth" ? TRUTHS : DARES, spice);
+    const prompt = pickRandom(kind === "Truth" ? TRUTHS : DARES, age);
     setCurrent({ kind, prompt });
     setStage("prompt");
   };
@@ -33,7 +34,8 @@ export default function TruthOrDare() {
     setStage("choose");
   };
 
-  const spiceLabel = { 1: "😇 Mild", 2: "😏 Flirty", 3: "🔥 Spicy" }[spice];
+  const ageLabel =
+    age < 21 ? "😇 Light" : age < 30 ? "😊 Sweet" : age < 50 ? "💞 Deeper" : "🌟 Reflective";
 
   return (
     <div className="max-w-lg mx-auto p-4 sm:p-6">
