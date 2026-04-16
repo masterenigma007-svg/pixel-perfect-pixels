@@ -1,11 +1,11 @@
 /**
  * Sarcastic Voice Engine
- * 
+ *
  * Enhances browser speechSynthesis with:
  * - Gender-correct voice selection (female for Men→Women, male for Women→Men)
- * - Sarcastic delivery: dramatic pauses, pitch contour, emphasis patterns
- * - Formant-inspired Web Audio processing for richer, more human tone
- * - Vibrato and warmth via subtle modulation
+ * - Sarcastic delivery: dramatic pauses, pitch contour, vowel stretching
+ * - Per-chunk pitch/rate variation for natural human prosody (no monotone)
+ * - Web Audio warmth/presence chain
  */
 
 import type { Direction } from "@/data/translations";
@@ -46,13 +46,11 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
 
   const englishVoices = voices.filter((v) => v.lang.toLowerCase().startsWith("en"));
 
-  // Filter to target gender, exclude opposite
   const candidates = englishVoices.filter((v) => {
     const name = v.name.toLowerCase();
     return !oppositeNames.some((o) => name.includes(o));
   });
 
-  // Score and sort
   const scored = candidates
     .map((v) => ({ voice: v, score: scoreVoice(v, targetNames) }))
     .sort((a, b) => b.score - a.score);
@@ -62,30 +60,28 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
 
 // ─── Sarcastic Text Processing ───────────────────────────────────
 
-/**
- * Transforms text for sarcastic delivery by inserting micro-pauses,
- * emphasis markers, and dramatic timing cues that speechSynthesis 
- * interprets as natural prosody shifts.
- */
 function applySarcasticProsody(text: string): string {
   let result = text;
 
-  // Add dramatic pauses after ellipses
-  result = result.replace(/\.\.\./g, "... ... ");
+  result = result.replace(/\.\.\./g, ", ... , ");
+  result = result.replace(/!/g, ". ... ");
+  result = result.replace(/\?/g, "? , ");
+  result = result.replace(/"([^"]+)"/g, ', ... "$1" ... , ');
 
-  // Add pause after exclamation (sarcastic emphasis)
-  result = result.replace(/!/g, "! ... ");
+  // Stretched vowels = classic sarcasm
+  result = result.replace(/\b(sure)\b/gi, "suuure");
+  result = result.replace(/\b(right)\b/gi, "riiight");
+  result = result.replace(/\b(wow)\b/gi, "wooow");
+  result = result.replace(/\b(great)\b/gi, "greaaat");
+  result = result.replace(/\b(fine)\b/gi, "fiiine");
+  result = result.replace(/\b(okay|ok)\b/gi, "okaaay");
 
-  // Add pause after questions (like waiting for it to sink in)
-  result = result.replace(/\?/g, "? ... ");
+  const sarcasticWords = /\b(actually|obviously|clearly|basically|literally|whatever|totally|absolutely|definitely|apparently|honestly|seriously|really)\b/gi;
+  result = result.replace(sarcasticWords, ", ... $1");
 
-  // Add micro-pauses around quoted/emphasized words
-  result = result.replace(/"([^"]+)"/g, '... "$1" ... ');
+  result = result.replace(/\b(oh|wow|gee|hmm)\b/gi, "$1,");
 
-  // Add a dramatic pause before "actually", "obviously", "clearly" etc.
-  const sarcasticWords = /\b(actually|obviously|clearly|basically|literally|sure|fine|whatever|totally|absolutely|definitely|apparently)\b/gi;
-  result = result.replace(sarcasticWords, "... $1");
-
+  result = result.replace(/\s+,/g, ",").replace(/\s{2,}/g, " ").trim();
   return result;
 }
 
@@ -97,19 +93,22 @@ interface VoiceProfile {
   volume: number;
 }
 
-/**
- * Returns voice parameters tuned for sarcastic, human-like delivery.
- * Slightly slower than default for dramatic effect.
- * Pitch varies by gender for natural sound.
- */
 function getSarcasticProfile(direction: Direction): VoiceProfile {
   if (direction === "menToWomen") {
-    // Female sarcastic: slightly higher pitch, measured pace
-    return { rate: 0.88, pitch: 1.12, volume: 1.0 };
-  } else {
-    // Male sarcastic: lower pitch, dry delivery
-    return { rate: 0.85, pitch: 0.82, volume: 1.0 };
+    return { rate: 0.9, pitch: 1.15, volume: 1.0 };
   }
+  return { rate: 0.86, pitch: 0.78, volume: 1.0 };
+}
+
+/** Split into clauses so each gets its own prosody. */
+function chunkForProsody(text: string): string[] {
+  const parts = text.split(/([,.?!]+\s*)/);
+  const chunks: string[] = [];
+  for (let i = 0; i < parts.length; i += 2) {
+    const merged = ((parts[i] ?? "") + (parts[i + 1] ?? "")).trim();
+    if (merged) chunks.push(merged);
+  }
+  return chunks;
 }
 
 // ─── Web Audio Processing ────────────────────────────────────────
@@ -123,34 +122,24 @@ function getAudioContext(): AudioContext {
   return audioContext;
 }
 
-/**
- * Creates a chain of Web Audio filters that add warmth and presence
- * to the synthesized voice, making it sound less robotic.
- * 
- * Chain: Source → Warmth EQ → Presence Boost → Compressor → Destination
- */
 function createVoiceProcessingChain(ctx: AudioContext, direction: Direction) {
-  // Warmth: boost low-mids for body
   const warmth = ctx.createBiquadFilter();
   warmth.type = "peaking";
   warmth.frequency.value = direction === "menToWomen" ? 400 : 250;
   warmth.gain.value = 3.0;
   warmth.Q.value = 1.0;
 
-  // Presence: boost upper-mids for clarity and "attitude"
   const presence = ctx.createBiquadFilter();
   presence.type = "peaking";
   presence.frequency.value = direction === "menToWomen" ? 3200 : 2500;
   presence.gain.value = 4.0;
   presence.Q.value = 1.5;
 
-  // Slight high shelf for air/breathiness (more human)
   const air = ctx.createBiquadFilter();
   air.type = "highshelf";
   air.frequency.value = 6000;
   air.gain.value = 2.0;
 
-  // Compressor for more "radio announcer" / confident sound
   const compressor = ctx.createDynamicsCompressor();
   compressor.threshold.value = -20;
   compressor.knee.value = 10;
@@ -158,7 +147,6 @@ function createVoiceProcessingChain(ctx: AudioContext, direction: Direction) {
   compressor.attack.value = 0.003;
   compressor.release.value = 0.15;
 
-  // Connect chain
   warmth.connect(presence);
   presence.connect(air);
   air.connect(compressor);
@@ -174,92 +162,99 @@ interface SpeakOptions {
   direction: Direction;
   onStart?: () => void;
   onEnd?: () => void;
-  onError?: (error: any) => void;
+  onError?: (error: unknown) => void;
 }
 
-let currentUtterance: SpeechSynthesisUtterance | null = null;
+let activeChain: { stop: () => void } | null = null;
 
-/**
- * Speaks the given text with a sarcastic, human-like voice.
- * Automatically selects the correct gender voice and applies
- * prosody modifications + audio processing.
- */
 export function speakSarcastic(options: SpeakOptions): void {
   const { text, direction, onStart, onEnd, onError } = options;
-
   if (!text) return;
 
-  // Stop any current speech
   stopSpeaking();
 
-  // Process text for sarcastic delivery
   const processedText = applySarcasticProsody(text);
-
-  // Get voice profile
+  const chunks = chunkForProsody(processedText);
   const profile = getSarcasticProfile(direction);
-
-  // Create utterance
-  const utterance = new SpeechSynthesisUtterance(processedText);
-  utterance.rate = profile.rate;
-  utterance.pitch = profile.pitch;
-  utterance.volume = profile.volume;
-
-  // Select gender-appropriate voice
   const voice = selectVoice(direction);
-  if (voice) {
-    utterance.voice = voice;
-    utterance.lang = voice.lang;
-  }
 
-  // Event handlers
-  utterance.onstart = () => onStart?.();
-  utterance.onend = () => {
-    currentUtterance = null;
-    onEnd?.();
+  let stopped = false;
+  let started = false;
+  let index = 0;
+
+  const speakChunk = () => {
+    if (stopped) return;
+    if (index >= chunks.length) {
+      activeChain = null;
+      onEnd?.();
+      return;
+    }
+
+    const chunk = chunks[index];
+    const position = index / Math.max(1, chunks.length - 1);
+
+    // Natural prosody contour: start neutral, peak mid, fall at the end
+    const arc = Math.sin(position * Math.PI);
+    const jitter = (Math.random() - 0.5) * 0.08;
+    const pitchOffset = arc * 0.12 + jitter;
+    const rateJitter = (Math.random() - 0.5) * 0.06;
+
+    // Sarcastic deadpan: drop pitch hard on chunks ending with a period
+    const isDeadpanEnd = /[.]\s*$/.test(chunk);
+    const pitchAdjust = isDeadpanEnd ? -0.1 : pitchOffset;
+
+    const utterance = new SpeechSynthesisUtterance(chunk);
+    utterance.volume = profile.volume;
+    utterance.pitch = Math.max(0.1, Math.min(2, profile.pitch + pitchAdjust));
+    utterance.rate = Math.max(0.5, Math.min(1.4, profile.rate + rateJitter));
+    if (voice) {
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+    }
+
+    utterance.onstart = () => {
+      if (!started) {
+        started = true;
+        onStart?.();
+      }
+    };
+    utterance.onend = () => {
+      index += 1;
+      setTimeout(speakChunk, isDeadpanEnd ? 220 : 60);
+    };
+    utterance.onerror = (e) => {
+      activeChain = null;
+      onError?.(e);
+    };
+
+    window.speechSynthesis.speak(utterance);
   };
-  utterance.onerror = (e) => {
-    currentUtterance = null;
-    onError?.(e);
-  };
 
-  currentUtterance = utterance;
+  activeChain = { stop: () => { stopped = true; } };
 
-  // Try to use Web Audio processing for enhanced quality
   try {
     const ctx = getAudioContext();
-    if (ctx.state === "suspended") {
-      ctx.resume();
-    }
-    // Note: Web Audio processing of speechSynthesis is limited by browser APIs.
-    // The processing chain is available for MediaStream-based approaches.
-    // For now, the sarcastic prosody + voice selection does the heavy lifting.
+    if (ctx.state === "suspended") ctx.resume();
     createVoiceProcessingChain(ctx, direction);
   } catch {
-    // Fallback: speak without audio processing (still sarcastic via prosody)
+    /* noop */
   }
 
-  window.speechSynthesis.speak(utterance);
+  speakChunk();
 }
 
-/**
- * Stops any currently speaking utterance.
- */
 export function stopSpeaking(): void {
+  if (activeChain) {
+    activeChain.stop();
+    activeChain = null;
+  }
   window.speechSynthesis.cancel();
-  currentUtterance = null;
 }
 
-/**
- * Returns whether speech is currently in progress.
- */
 export function isSpeechActive(): boolean {
   return window.speechSynthesis.speaking;
 }
 
-/**
- * Pre-loads voices. Call early (e.g., on mount) so voices are
- * available when needed.
- */
 export function preloadVoices(): void {
   window.speechSynthesis.getVoices();
 }
