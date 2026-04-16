@@ -13,9 +13,16 @@ import type { Direction } from "@/data/translations";
 // ─── Voice Selection ─────────────────────────────────────────────
 
 const FEMALE_NAMES = [
-  "microsoft jenny", "microsoft zira", "google uk english female",
+  "google uk english female", "google us english",
+  "microsoft aria", "microsoft jenny", "microsoft ava", "microsoft emma",
+  "microsoft michelle", "microsoft zira",
   "samantha", "victoria", "karen", "tessa", "fiona", "moira",
-  "alice", "hazel", "susan", "jenny", "aria", "ava", "serena", "emma",
+  "alice", "hazel", "susan", "serena", "allison", "ava", "emma", "aria",
+];
+
+const PREMIUM_FEMALE_NAMES = [
+  "google uk english female", "microsoft aria", "microsoft jenny",
+  "microsoft ava", "microsoft emma", "samantha", "serena", "allison",
 ];
 
 const MALE_NAMES = [
@@ -52,8 +59,10 @@ function scoreVoice(voice: SpeechSynthesisVoice, direction: Direction, targetNam
   if (preferBritishMale) {
     if (lang.startsWith("en-gb") || lang.startsWith("en-uk")) score += 14;
     if (BRITISH_MALE_NAMES.some((n) => name.includes(n))) score += 10;
-  } else if (lang.startsWith("en-us")) {
-    score += 2;
+  } else {
+    // Female: prefer natural-sounding premium voices, US or UK
+    if (PREMIUM_FEMALE_NAMES.some((n) => name.includes(n))) score += 12;
+    if (lang.startsWith("en-us") || lang.startsWith("en-gb")) score += 3;
   }
 
   if (ROBOTIC_KEYWORDS.some((k) => name.includes(k))) score -= 12;
@@ -115,7 +124,9 @@ interface VoiceProfile {
 
 function getSarcasticProfile(direction: Direction): VoiceProfile {
   if (direction === "menToWomen") {
-    return { rate: 0.92, pitch: 1.12, volume: 1.0 };
+    // Natural female delivery: slightly slower than normal for sass,
+    // pitch just above neutral so it sounds warm and human, not chipmunk.
+    return { rate: 0.96, pitch: 1.04, volume: 1.0 };
   }
   // Male British-leaning sarcastic delivery:
   // - rate 0.9 = unhurried, dry
@@ -130,14 +141,11 @@ function getSarcasticProfile(direction: Direction): VoiceProfile {
  * intonation and pauses instead of monotone speech.
  */
 function chunkForProsody(text: string, direction: Direction): string[] {
-  if (direction === "womenToMen") {
-    return [text.trim()].filter(Boolean);
-  }
-
-  return text
-    .split(/[.!?;,]+/)
-    .map((part) => part.trim())
-    .filter(Boolean);
+  // Both voices speak as a single utterance. Splitting on punctuation and
+  // re-speaking each clause with random pitch was the source of the choppy,
+  // robotic sound — the engine's built-in prosody handles commas/periods
+  // far better than manual chunking.
+  return [text.trim()].filter(Boolean);
 }
 
 // ─── Web Audio Processing ────────────────────────────────────────
@@ -224,21 +232,10 @@ export function speakSarcastic(options: SpeakOptions): void {
 
   chunks.forEach((chunkText, index) => {
     const utterance = new SpeechSynthesisUtterance(chunkText);
-    const position = index / Math.max(1, chunks.length - 1);
-    const arc = Math.sin(position * Math.PI);
-    const isLast = index === chunks.length - 1;
-    const useSteadyMaleDelivery = direction === "womenToMen";
-
-    const pitchAdjust = useSteadyMaleDelivery
-      ? 0
-      : (isLast ? -0.08 : arc * 0.08 + (Math.random() - 0.5) * 0.04);
-    const rateAdjust = useSteadyMaleDelivery
-      ? 0
-      : (Math.random() - 0.5) * 0.04;
 
     utterance.volume = profile.volume;
-    utterance.pitch = Math.max(0.1, Math.min(2, profile.pitch + pitchAdjust));
-    utterance.rate = Math.max(0.5, Math.min(1.4, profile.rate + rateAdjust));
+    utterance.pitch = profile.pitch;
+    utterance.rate = profile.rate;
 
     if (voice) {
       utterance.voice = voice;
