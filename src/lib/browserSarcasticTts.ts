@@ -62,9 +62,35 @@ const PREMIUM_KEYWORDS = [
 
 const NEURAL_KEYWORDS = ["neural", "natural", "online", "premium", "enhanced"];
 
+const LOW_QUALITY_FEMALE_NAMES = [
+  "microsoft zira",
+  "microsoft ava",
+  "microsoft emma",
+  "microsoft michelle",
+  "hazel",
+  "susan",
+  "allison",
+];
+
 const ROBOTIC_KEYWORDS = [
   "espeak", "compact", "synth", "festival", "classic", "old", "legacy",
 ];
+
+function isNeuralVoice(voice: SpeechSynthesisVoice): boolean {
+  const name = voice.name.toLowerCase();
+  return NEURAL_KEYWORDS.some((keyword) => name.includes(keyword));
+}
+
+function isBritishFemaleVoice(voice: SpeechSynthesisVoice): boolean {
+  const name = voice.name.toLowerCase();
+  const lang = voice.lang.toLowerCase();
+
+  return (
+    lang.startsWith("en-gb") ||
+    lang.startsWith("en-uk") ||
+    BRITISH_FEMALE_NAMES.some((target) => name.includes(target))
+  );
+}
 
 function scoreVoice(voice: SpeechSynthesisVoice, direction: Direction, targetNames: string[]): number {
   const name = voice.name.toLowerCase();
@@ -82,17 +108,17 @@ function scoreVoice(voice: SpeechSynthesisVoice, direction: Direction, targetNam
     if (lang.startsWith("en-gb") || lang.startsWith("en-uk")) score += 14;
     if (BRITISH_MALE_NAMES.some((target) => name.includes(target))) score += 10;
   } else if (preferBritishFemale) {
-    // Strongly prefer British English female voices, then neural quality.
-    if (lang.startsWith("en-gb") || lang.startsWith("en-uk")) score += 28;
-    else if (lang.startsWith("en-au") || lang.startsWith("en-ie")) score += 8;
-    else if (lang.startsWith("en")) score -= 10; // discourage US accents
-    if (BRITISH_FEMALE_NAMES.some((target) => name.includes(target))) score += 22;
-    if (PREMIUM_FEMALE_NAMES.some((target) => name.includes(target))) score += 10;
-    // Neural / online variants are dramatically more human-sounding.
-    if (NEURAL_KEYWORDS.some((keyword) => name.includes(keyword))) score += 16;
-    // Local non-neural voices on desktop OSes tend to sound robotic — slight penalty
-    // unless they are one of the known good British names above.
-    if (voice.localService && !NEURAL_KEYWORDS.some((k) => name.includes(k))) score -= 4;
+    if (lang.startsWith("en-gb") || lang.startsWith("en-uk")) score += 34;
+    else if (lang.startsWith("en-au") || lang.startsWith("en-ie")) score += 10;
+    else if (lang.startsWith("en-us")) score -= 20;
+    else if (lang.startsWith("en")) score -= 12;
+
+    if (BRITISH_FEMALE_NAMES.some((target) => name.includes(target))) score += 26;
+    if (PREMIUM_FEMALE_NAMES.some((target) => name.includes(target))) score += 14;
+    if (isNeuralVoice(voice)) score += 18;
+    if (LOW_QUALITY_FEMALE_NAMES.some((target) => name.includes(target))) score -= 14;
+
+    if (voice.localService && !isNeuralVoice(voice)) score -= 8;
   } else {
     if (PREMIUM_FEMALE_NAMES.some((target) => name.includes(target))) score += 12;
     if (lang.startsWith("en-us") || lang.startsWith("en-gb")) score += 3;
@@ -115,18 +141,26 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
     return !oppositeNames.some((opposite) => name.includes(opposite));
   });
 
-  const scored = candidates
+  const preferredPool = wantFemale
+    ? candidates.filter(isBritishFemaleVoice).length
+      ? candidates.filter(isBritishFemaleVoice)
+      : candidates.filter(isNeuralVoice).length
+        ? candidates.filter(isNeuralVoice)
+        : candidates
+    : candidates;
+
+  const scored = preferredPool
     .map((voice) => ({ voice, score: scoreVoice(voice, direction, targetNames) }))
     .sort((a, b) => b.score - a.score);
 
   return scored[0]?.voice || englishVoices[0] || voices[0] || null;
 }
 
-function getSarcasticProfile(direction: Direction): VoiceProfile {
+function getSarcasticProfile(direction: Direction, voice: SpeechSynthesisVoice | null): VoiceProfile {
   if (direction === "menToWomen") {
-    // Natural British female cadence — slower, lower pitch reduces synthetic edge
-    // and adds the dry sarcastic delivery the app is known for.
-    return { rate: 0.88, pitch: 0.92, volume: 1.0 };
+    return isNeuralVoice(voice as SpeechSynthesisVoice)
+      ? { rate: 0.97, pitch: 1.01, volume: 1.0 }
+      : { rate: 1.0, pitch: 1.08, volume: 1.0 };
   }
 
   return { rate: 0.9, pitch: 1.05, volume: 1.0 };
@@ -136,8 +170,8 @@ export function speakWithBrowserTts(options: BrowserSpeakOptions): SpeechPlaybac
   const { text, direction, onStart, onEnd, onError } = options;
   if (!text) return null;
 
-  const profile = getSarcasticProfile(direction);
   const voice = selectVoice(direction);
+  const profile = getSarcasticProfile(direction, voice);
   const utterance = new SpeechSynthesisUtterance(text);
 
   let stopped = false;
