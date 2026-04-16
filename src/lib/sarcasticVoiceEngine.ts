@@ -232,21 +232,10 @@ export function speakSarcastic(options: SpeakOptions): void {
 
   chunks.forEach((chunkText, index) => {
     const utterance = new SpeechSynthesisUtterance(chunkText);
-    const position = index / Math.max(1, chunks.length - 1);
-    const arc = Math.sin(position * Math.PI);
-    const isLast = index === chunks.length - 1;
-    const useSteadyMaleDelivery = direction === "womenToMen";
-
-    const pitchAdjust = useSteadyMaleDelivery
-      ? 0
-      : (isLast ? -0.08 : arc * 0.08 + (Math.random() - 0.5) * 0.04);
-    const rateAdjust = useSteadyMaleDelivery
-      ? 0
-      : (Math.random() - 0.5) * 0.04;
 
     utterance.volume = profile.volume;
-    utterance.pitch = Math.max(0.1, Math.min(2, profile.pitch + pitchAdjust));
-    utterance.rate = Math.max(0.5, Math.min(1.4, profile.rate + rateAdjust));
+    utterance.pitch = profile.pitch;
+    utterance.rate = profile.rate;
 
     if (voice) {
       utterance.voice = voice;
