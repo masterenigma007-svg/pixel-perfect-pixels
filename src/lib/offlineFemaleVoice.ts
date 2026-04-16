@@ -25,34 +25,21 @@ function getAudioContext(): AudioContext {
 
 async function getFemaleVoiceEngine() {
   if (!kokoroPromise) {
-    // q4 ≈ 4× smaller than q8 and ~2× smaller than fp16 — significantly
-    // faster first-load on mobile while keeping the female voice human.
-    kokoroPromise = import("kokoro-js")
-      .then(({ KokoroTTS }) =>
-        KokoroTTS.from_pretrained(MODEL_ID, {
-          dtype: "q4",
-          device: "wasm",
-        })
-      )
-      .catch((error) => {
-        // Reset so the next user gesture can retry instead of being stuck
-        // on a permanently-rejected promise.
-        kokoroPromise = null;
-        throw error;
-      });
+    kokoroPromise = import("kokoro-js").then(({ KokoroTTS }) =>
+      KokoroTTS.from_pretrained(MODEL_ID, {
+        dtype: "q8",
+        device: "wasm",
+      })
+    );
   }
 
   return kokoroPromise;
 }
 
-/**
- * Intentionally a no-op now. The offline female voice model is multi-megabyte
- * and must NOT be downloaded during app startup — it would freeze mobile
- * launches. The model now lazy-loads on the first speaker tap inside
- * speakWithOfflineFemaleVoice, and the browser TTS fallback covers the gap.
- */
 export function preloadOfflineFemaleVoice(): void {
-  // no-op by design
+  void getFemaleVoiceEngine().catch(() => {
+    kokoroPromise = null;
+  });
 }
 
 export async function speakWithOfflineFemaleVoice(

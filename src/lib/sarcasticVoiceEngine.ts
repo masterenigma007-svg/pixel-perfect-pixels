@@ -1,6 +1,6 @@
 import type { Direction } from "@/data/translations";
 import { preloadBrowserVoices, speakWithBrowserTts, type SpeechPlaybackHandle } from "@/lib/browserSarcasticTts";
-import { speakWithOfflineFemaleVoice } from "@/lib/offlineFemaleVoice";
+import { preloadOfflineFemaleVoice, speakWithOfflineFemaleVoice } from "@/lib/offlineFemaleVoice";
 import { prepareSpeechText } from "@/lib/speechTextUtils";
 
 // ─── Main Speak Function ─────────────────────────────────────────
@@ -95,6 +95,17 @@ export function isSpeechActive(): boolean {
 
 export function preloadVoices(): void {
   preloadBrowserVoices();
-  // The offline female voice model is large; we lazy-load it on the first
-  // speaker tap so it never delays mobile startup.
+
+  if (typeof window === "undefined") return;
+
+  const idleWindow = window as Window & {
+    requestIdleCallback?: (callback: () => void) => number;
+  };
+
+  if (idleWindow.requestIdleCallback) {
+    idleWindow.requestIdleCallback(() => preloadOfflineFemaleVoice());
+    return;
+  }
+
+  globalThis.setTimeout(() => preloadOfflineFemaleVoice(), 800);
 }
