@@ -159,8 +159,8 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
 function getSarcasticProfile(direction: Direction, voice: SpeechSynthesisVoice | null): VoiceProfile {
   if (direction === "menToWomen") {
     return isNeuralVoice(voice as SpeechSynthesisVoice)
-      ? { rate: 0.97, pitch: 1.01, volume: 1.0 }
-      : { rate: 1.0, pitch: 1.08, volume: 1.0 };
+      ? { rate: 1.0, pitch: 1.0, volume: 1.0 }
+      : { rate: 1.02, pitch: 1.05, volume: 1.0 };
   }
 
   return { rate: 0.9, pitch: 1.05, volume: 1.0 };
@@ -172,7 +172,8 @@ export function speakWithBrowserTts(options: BrowserSpeakOptions): SpeechPlaybac
 
   const voice = selectVoice(direction);
   const profile = getSarcasticProfile(direction, voice);
-  const utterance = new SpeechSynthesisUtterance(text);
+  const spokenText = direction === "menToWomen" ? humanizeFemaleCadence(text) : text;
+  const utterance = new SpeechSynthesisUtterance(spokenText);
 
   let stopped = false;
 
