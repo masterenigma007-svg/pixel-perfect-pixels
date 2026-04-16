@@ -94,18 +94,10 @@ export function isSpeechActive(): boolean {
 }
 
 export function preloadVoices(): void {
+  // Only warm up the lightweight browser voices on startup.
+  // The offline female voice (kokoro-js, ~80MB) is loaded lazily on first
+  // use to keep mobile startup fast and memory low.
   preloadBrowserVoices();
-
-  if (typeof window === "undefined") return;
-
-  const idleWindow = window as Window & {
-    requestIdleCallback?: (callback: () => void) => number;
-  };
-
-  if (idleWindow.requestIdleCallback) {
-    idleWindow.requestIdleCallback(() => preloadOfflineFemaleVoice());
-    return;
-  }
-
-  globalThis.setTimeout(() => preloadOfflineFemaleVoice(), 800);
 }
+
+export { preloadOfflineFemaleVoice };
