@@ -9,8 +9,8 @@ interface OfflineFemaleSpeakOptions {
 }
 
 const MODEL_ID = "onnx-community/Kokoro-82M-v1.0-ONNX";
-const FEMALE_VOICE = "af_bella" as const;
-const FEMALE_SPEED = 0.94;
+const FEMALE_VOICE = "bf_emma" as const;
+const FEMALE_SPEED = 0.98;
 
 let audioContext: AudioContext | null = null;
 let kokoroPromise: Promise<KokoroTTS> | null = null;
