@@ -1,6 +1,5 @@
 import type { Direction } from "@/data/translations";
 import { preloadBrowserVoices, speakWithBrowserTts, type SpeechPlaybackHandle } from "@/lib/browserSarcasticTts";
-import { preloadOfflineFemaleVoice, speakWithOfflineFemaleVoice } from "@/lib/offlineFemaleVoice";
 import { prepareSpeechText } from "@/lib/speechTextUtils";
 
 // ─── Main Speak Function ─────────────────────────────────────────
@@ -33,22 +32,6 @@ export function speakSarcastic(options: SpeakOptions): void {
     callback?.();
   };
 
-  const browserFallback = (originalError: unknown) => {
-    if (sessionId !== playbackSessionId) return;
-
-    activePlayback = speakWithBrowserTts({
-      text: processedText,
-      direction,
-      onStart,
-      onEnd: () => finalizePlayback(onEnd),
-      onError: (fallbackError) => finalizePlayback(() => onError?.(fallbackError ?? originalError)),
-    });
-
-    if (!activePlayback) {
-      finalizePlayback(() => onError?.(originalError));
-    }
-  };
-
   activePlayback = speakWithBrowserTts({
     text: processedText,
     direction,
@@ -74,10 +57,9 @@ export function isSpeechActive(): boolean {
 }
 
 export function preloadVoices(): void {
-  // Only warm up the lightweight browser voices on startup.
-  // The offline female voice (kokoro-js, ~80MB) is loaded lazily on first
-  // use to keep mobile startup fast and memory low.
   preloadBrowserVoices();
 }
 
-export { preloadOfflineFemaleVoice };
+export function preloadOfflineFemaleVoice(): void {
+  // No-op: female voice now uses the same browser TTS engine as the male voice.
+}
