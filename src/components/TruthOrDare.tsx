@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TRUTHS, DARES, pickRandom, type TodPrompt } from "@/data/truthOrDarePrompts";
 import { Slider } from "@/components/ui/slider";
-import truthOrDareHero from "@/assets/truthordare-hero.jpg";
+
 
 type Stage = "setup" | "choose" | "prompt";
 
@@ -37,14 +37,6 @@ export default function TruthOrDare() {
 
   return (
     <div className="max-w-lg mx-auto p-4 sm:p-6">
-      <img
-        src={truthOrDareHero}
-        alt="Glowing flame symbolizing passion and dares"
-        loading="lazy"
-        width={1024}
-        height={512}
-        className="w-full h-32 sm:h-40 object-cover rounded-2xl mb-5 shadow-lg"
-      />
       <AnimatePresence mode="wait">
         {stage === "setup" && (
           <motion.div
