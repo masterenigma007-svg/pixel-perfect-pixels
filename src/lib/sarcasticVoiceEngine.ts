@@ -33,27 +33,12 @@ export function speakSarcastic(options: SpeakOptions): void {
     callback?.();
   };
 
-  const fallbackToBrowser = () => {
-    if (sessionId !== playbackSessionId) return;
-    activePlayback = speakWithBrowserTts({
-      text: processedText,
-      direction,
-      onStart,
-      onEnd: () => finalizePlayback(onEnd),
-      onError: (error) => finalizePlayback(() => onError?.(error)),
-    });
-  };
-
   if (direction === "menToWomen") {
     speakWithServerFemaleVoice({
       text: processedText,
       onStart,
       onEnd: () => finalizePlayback(onEnd),
-      onError: () => {
-        // Server voice failed — fall back to browser TTS.
-        if (sessionId !== playbackSessionId) return;
-        fallbackToBrowser();
-      },
+      onError: (error) => finalizePlayback(() => onError?.(error)),
     }).then((handle) => {
       if (sessionId !== playbackSessionId) {
         handle?.stop();
@@ -62,7 +47,7 @@ export function speakSarcastic(options: SpeakOptions): void {
       if (handle) {
         activePlayback = handle;
       } else {
-        fallbackToBrowser();
+        finalizePlayback(() => onError?.(new Error("Female voice playback failed")));
       }
     });
     return;
