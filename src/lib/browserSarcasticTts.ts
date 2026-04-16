@@ -134,7 +134,7 @@ export function speakWithBrowserTts(options: BrowserSpeakOptions): SpeechPlaybac
     utterance.voice = voice;
     utterance.lang = voice.lang;
   } else {
-    utterance.lang = direction === "womenToMen" ? "en-GB" : "en-US";
+    utterance.lang = "en-GB";
   }
 
   utterance.onstart = () => {
