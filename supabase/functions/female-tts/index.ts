@@ -145,6 +145,70 @@ async function fetchElevenLabs(text: string): Promise<Uint8Array | null> {
   }
 }
 
+// ── VoiceRSS (FREE demo key, no signup, real human voices) ────
+// "Linda" = warm American female. Limit ~350 chars per call on demo key,
+// so we chunk and concatenate.
+const VOICERSS_MAX = 300;
+
+function chunkForVoiceRss(text: string): string[] {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (!clean) return [];
+  if (clean.length <= VOICERSS_MAX) return [clean];
+  const parts: string[] = [];
+  const sentences = clean.match(/[^.!?]+[.!?]?/g) ?? [clean];
+  let current = "";
+  for (const s of sentences) {
+    const t = s.trim();
+    if (!t) continue;
+    if ((current + " " + t).trim().length <= VOICERSS_MAX) {
+      current = (current ? current + " " : "") + t;
+    } else {
+      if (current) parts.push(current);
+      current = t.length <= VOICERSS_MAX ? t : t.slice(0, VOICERSS_MAX);
+    }
+  }
+  if (current) parts.push(current);
+  return parts;
+}
+
+async function fetchVoiceRssChunk(text: string): Promise<Uint8Array | null> {
+  try {
+    const url =
+      "https://api.voicerss.org/?key=demo&hl=en-us&v=Linda&c=MP3&f=44khz_16bit_stereo&r=-2&src=" +
+      encodeURIComponent(text);
+    const res = await fetch(url, {
+      headers: { Accept: "audio/mpeg, */*" },
+    });
+    if (!res.ok) {
+      console.warn(`[female-tts] VoiceRSS ${res.status}`);
+      return null;
+    }
+    const buf = new Uint8Array(await res.arrayBuffer());
+    // VoiceRSS returns text errors with 200 status sometimes
+    if (buf.length < 500) {
+      const txt = new TextDecoder().decode(buf);
+      console.warn(`[female-tts] VoiceRSS suspicious payload: ${txt}`);
+      return null;
+    }
+    return buf;
+  } catch (err) {
+    console.warn("[female-tts] VoiceRSS exception:", err);
+    return null;
+  }
+}
+
+async function fetchVoiceRss(text: string): Promise<Uint8Array | null> {
+  const chunks = chunkForVoiceRss(text);
+  if (!chunks.length) return null;
+  const buffers: Uint8Array[] = [];
+  for (const c of chunks) {
+    const buf = await fetchVoiceRssChunk(c);
+    if (!buf) return null;
+    buffers.push(buf);
+  }
+  return concat(buffers);
+}
+
 // ── Google fallback ───────────────────────────────────────────
 function chunkText(text: string): string[] {
   const clean = text.replace(/\s+/g, " ").trim();
@@ -245,9 +309,9 @@ Deno.serve(async (req) => {
 
     console.log(`[female-tts] cache MISS ${hash.slice(0, 8)} — generating`);
 
-    // Provider chain: ElevenLabs → Google fallback
-    // (Lovable AI Gateway does not support TTS — only chat/image models)
+    // Provider chain: VoiceRSS (free demo, human "Linda") → ElevenLabs → Google fallback
     const providers: Array<{ name: string; fn: () => Promise<Uint8Array | null> }> = [
+      { name: "voicerss", fn: () => fetchVoiceRss(text) },
       { name: "elevenlabs", fn: () => fetchElevenLabs(text) },
     ];
 
