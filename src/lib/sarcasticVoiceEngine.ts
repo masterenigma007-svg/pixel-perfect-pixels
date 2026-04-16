@@ -61,24 +61,16 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
 // ─── Sarcastic Text Processing ───────────────────────────────────
 
 /**
- * Lightly stretches sarcastic-tagged words. Does NOT inject punctuation tokens
- * — pacing comes from per-chunk timing instead, so screen readers / TTS engines
- * never literally pronounce "comma" or "dot".
+ * Cleans text for TTS without altering wording.
+ * - Strips characters some engines vocalize (asterisks, brackets, etc.)
+ * - Normalizes whitespace
+ * - Does NOT add or change any words — the translation is spoken verbatim.
  */
 function applySarcasticProsody(text: string): string {
-  let result = text;
-
-  // Stretched vowels for classic sarcasm flavor
-  result = result.replace(/\bsure\b/gi, "suuure");
-  result = result.replace(/\bright\b/gi, "riiight");
-  result = result.replace(/\bwow\b/gi, "wooow");
-  result = result.replace(/\bgreat\b/gi, "greaaat");
-  result = result.replace(/\bfine\b/gi, "fiiine");
-  result = result.replace(/\b(okay|ok)\b/gi, "okaaay");
-
-  // Normalize whitespace, strip stray punctuation tokens that some engines vocalize
-  result = result.replace(/\s{2,}/g, " ").trim();
-  return result;
+  return text
+    .replace(/[*_`~<>[\](){}]/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 // ─── Voice Parameter Profiles ────────────────────────────────────
