@@ -1,5 +1,6 @@
 import type { Direction } from "@/data/translations";
 import { preloadBrowserVoices, speakWithBrowserTts, type SpeechPlaybackHandle } from "@/lib/browserSarcasticTts";
+import { speakWithServerFemaleVoice } from "@/lib/serverFemaleVoice";
 import { prepareSpeechText } from "@/lib/speechTextUtils";
 
 // ─── Main Speak Function ─────────────────────────────────────────
@@ -31,6 +32,41 @@ export function speakSarcastic(options: SpeakOptions): void {
     activePlayback = null;
     callback?.();
   };
+
+  const fallbackToBrowser = () => {
+    if (sessionId !== playbackSessionId) return;
+    activePlayback = speakWithBrowserTts({
+      text: processedText,
+      direction,
+      onStart,
+      onEnd: () => finalizePlayback(onEnd),
+      onError: (error) => finalizePlayback(() => onError?.(error)),
+    });
+  };
+
+  if (direction === "menToWomen") {
+    speakWithServerFemaleVoice({
+      text: processedText,
+      onStart,
+      onEnd: () => finalizePlayback(onEnd),
+      onError: () => {
+        // Server voice failed (offline, rate-limited, etc.) — fall back to browser TTS.
+        if (sessionId !== playbackSessionId) return;
+        fallbackToBrowser();
+      },
+    }).then((handle) => {
+      if (sessionId !== playbackSessionId) {
+        handle?.stop();
+        return;
+      }
+      if (handle) {
+        activePlayback = handle;
+      } else {
+        fallbackToBrowser();
+      }
+    });
+    return;
+  }
 
   activePlayback = speakWithBrowserTts({
     text: processedText,
