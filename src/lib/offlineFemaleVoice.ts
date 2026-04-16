@@ -1,4 +1,5 @@
 import type { SpeechPlaybackHandle } from "@/lib/browserSarcasticTts";
+import type { KokoroTTS } from "kokoro-js";
 
 interface OfflineFemaleSpeakOptions {
   text: string;
@@ -8,13 +9,11 @@ interface OfflineFemaleSpeakOptions {
 }
 
 const MODEL_ID = "onnx-community/Kokoro-82M-v1.0-ONNX";
-const FEMALE_VOICE = "af_bella";
+const FEMALE_VOICE = "af_bella" as const;
 const FEMALE_SPEED = 0.94;
 
 let audioContext: AudioContext | null = null;
-let kokoroPromise: Promise<{
-  generate: (text: string, options: { voice: string; speed: number }) => Promise<{ toBlob: () => Blob | Promise<Blob> }>;
-}> | null = null;
+let kokoroPromise: Promise<KokoroTTS> | null = null;
 
 function getAudioContext(): AudioContext {
   if (!audioContext || audioContext.state === "closed") {

@@ -98,10 +98,14 @@ export function preloadVoices(): void {
 
   if (typeof window === "undefined") return;
 
-  if ("requestIdleCallback" in window) {
-    window.requestIdleCallback(() => preloadOfflineFemaleVoice());
+  const idleWindow = window as Window & {
+    requestIdleCallback?: (callback: () => void) => number;
+  };
+
+  if (idleWindow.requestIdleCallback) {
+    idleWindow.requestIdleCallback(() => preloadOfflineFemaleVoice());
     return;
   }
 
-  window.setTimeout(() => preloadOfflineFemaleVoice(), 800);
+  globalThis.setTimeout(() => preloadOfflineFemaleVoice(), 800);
 }
