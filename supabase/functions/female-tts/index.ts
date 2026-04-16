@@ -1,6 +1,11 @@
 // Edge function: returns MP3 audio for a given text using a high-quality
-// British female voice. Uses Google Translate's public TTS endpoint
-// (no API key required) with chunking to support longer texts.
+// British female voice. Tries ElevenLabs first (studio-quality, sarcastic-friendly
+// British female voice), and falls back to Google Translate's public TTS endpoint
+// if ElevenLabs is unavailable, rate-limited, or out of credits.
+
+// ElevenLabs voice: "Charlotte" — warm, expressive British female. Great for sarcasm.
+const ELEVENLABS_VOICE_ID = "XB0fDUnXU5powFXDhCwa"; // Charlotte
+const ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5"; // Low-latency, high quality
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,6 +51,48 @@ function chunkText(text: string): string[] {
   }
   if (current) parts.push(current);
   return parts;
+}
+
+async function fetchElevenLabs(text: string): Promise<Uint8Array | null> {
+  const apiKey = Deno.env.get("ELEVENLABS_API_KEY");
+  if (!apiKey) return null;
+
+  try {
+    const res = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}?output_format=mp3_44100_128`,
+      {
+        method: "POST",
+        headers: {
+          "xi-api-key": apiKey,
+          "Content-Type": "application/json",
+          "Accept": "audio/mpeg",
+        },
+        body: JSON.stringify({
+          text,
+          model_id: ELEVENLABS_MODEL_ID,
+          voice_settings: {
+            // Lower stability + higher style = more expressive, sarcastic delivery
+            stability: 0.35,
+            similarity_boost: 0.8,
+            style: 0.65,
+            use_speaker_boost: true,
+            speed: 0.96,
+          },
+        }),
+      }
+    );
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.warn(`ElevenLabs failed [${res.status}]: ${errText}`);
+      return null;
+    }
+
+    return new Uint8Array(await res.arrayBuffer());
+  } catch (err) {
+    console.warn("ElevenLabs request error:", err);
+    return null;
+  }
 }
 
 async function fetchChunk(text: string): Promise<Uint8Array> {
@@ -97,6 +144,21 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Try ElevenLabs first — handles full text in one request (up to ~5000 chars).
+    const elevenAudio = await fetchElevenLabs(text);
+    if (elevenAudio && elevenAudio.length > 0) {
+      return new Response(elevenAudio, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "audio/mpeg",
+          "Cache-Control": "public, max-age=86400",
+          "X-TTS-Provider": "elevenlabs",
+        },
+      });
+    }
+
+    // Fallback: Google Translate TTS (chunked).
     const chunks = chunkText(text);
     if (!chunks.length) {
       return new Response(JSON.stringify({ error: "Empty text" }), {
