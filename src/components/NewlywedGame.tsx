@@ -436,8 +436,8 @@ export default function NewlywedGame() {
                     </h2>
                     <p className="text-sm text-muted-foreground italic">
                       {passedThreshold
-                        ? `You hit ${accuracy}% — above the 75% 'soulmate' threshold.`
-                        : `You scored ${accuracy}%. The 75% threshold is the goal — try again!`}
+                        ? `You hit ${accuracy}% — above the ${thresholdPct}% ${DIFFICULTY_META[difficulty].label} threshold.`
+                        : `You scored ${accuracy}%. The ${thresholdPct}% (${DIFFICULTY_META[difficulty].label}) threshold is the goal — try again!`}
                     </p>
                   </div>
 
@@ -449,7 +449,7 @@ export default function NewlywedGame() {
                     </div>
                     <div className="text-center p-4 rounded-xl border-2 border-border bg-muted">
                       <p className="text-3xl font-bold text-foreground">{matches}/{results.length}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Matches (≥75%)</p>
+                      <p className="text-xs text-muted-foreground mt-1">Matches (≥{thresholdPct}%)</p>
                     </div>
                   </div>
 
