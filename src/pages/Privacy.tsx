@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useEffect } from "react";
 
 const EFFECTIVE_DATE = "April 16, 2026";
-const CONTACT_EMAIL = "support@relationshipsaver.app";
+const CONTACT_EMAIL = "masterenigma007@gmail.com";
 
 export default function Privacy() {
   useEffect(() => {
