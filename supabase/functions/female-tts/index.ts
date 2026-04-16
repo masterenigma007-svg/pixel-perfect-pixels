@@ -53,7 +53,9 @@ async function cachePut(path: string, audio: Uint8Array): Promise<void> {
     }
   );
   if (!res.ok) {
-    console.warn(`[female-tts] cache upload failed ${res.status}: ${await res.text()}`);
+    const message = await res.text();
+    console.warn(`[female-tts] cache upload failed ${res.status}: ${message}`);
+    throw new Error(`Cache upload failed: ${res.status}`);
   }
 }
 
@@ -321,8 +323,36 @@ Deno.serve(async (req) => {
     const edgeAudio = await fetchEdgeTts(text);
     if (edgeAudio && edgeAudio.length > 0) {
       console.log(`[female-tts] Edge TTS success: ${edgeAudio.length} bytes`);
-      await cachePut(path, edgeAudio);
-      return new Response(JSON.stringify({ url, cached: false }), {
+      try {
+        await cachePut(path, edgeAudio);
+        return new Response(JSON.stringify({ url, cached: false }), {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "X-TTS-Provider": "edge-tts",
+          },
+        });
+      } catch (cacheError) {
+        console.warn("[female-tts] Edge audio generated but cache upload failed", cacheError);
+        return new Response(edgeAudio, {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "audio/mpeg",
+            "Cache-Control": "no-store",
+            "X-TTS-Provider": "edge-tts-direct",
+          },
+        });
+      }
+    }
+
+    console.warn("[female-tts] Edge TTS failed; using direct Google fallback audio");
+
+    // Fallback: Google Translate TTS
+    const chunks = chunkText(text);
+    if (!chunks.length) {
+      return new Response(JSON.stringify({ error: "Empty text" }), {
         status: 200,
         headers: {
           ...corsHeaders,
@@ -331,32 +361,33 @@ Deno.serve(async (req) => {
         },
       });
     }
-
-    console.warn("[female-tts] Edge TTS failed, falling back to Google");
-
-    // Fallback: Google Translate TTS
-    const chunks = chunkText(text);
-    if (!chunks.length) {
-      return new Response(JSON.stringify({ error: "Empty text" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
     const audioBuffers: Uint8Array[] = [];
     for (const chunk of chunks) {
       audioBuffers.push(await fetchGoogleChunk(chunk));
     }
     const merged = concatMp3(audioBuffers);
-    await cachePut(path, merged);
-
-    return new Response(JSON.stringify({ url, cached: false }), {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-        "X-TTS-Provider": "google-fallback",
-      },
-    });
+    try {
+      await cachePut(path, merged);
+      return new Response(JSON.stringify({ url, cached: false }), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "X-TTS-Provider": "google-fallback",
+        },
+      });
+    } catch (cacheError) {
+      console.warn("[female-tts] Google fallback cache upload failed", cacheError);
+      return new Response(merged, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "audio/mpeg",
+          "Cache-Control": "no-store",
+          "X-TTS-Provider": "google-fallback-direct",
+        },
+      });
+    }
   } catch (err) {
     console.error("[female-tts] error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";

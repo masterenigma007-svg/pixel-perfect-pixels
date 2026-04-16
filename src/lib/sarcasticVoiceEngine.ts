@@ -49,11 +49,7 @@ export function speakSarcastic(options: SpeakOptions): void {
       text: processedText,
       onStart,
       onEnd: () => finalizePlayback(onEnd),
-      onError: () => {
-        // Server voice failed — fall back to browser TTS.
-        if (sessionId !== playbackSessionId) return;
-        fallbackToBrowser();
-      },
+      onError: (error) => finalizePlayback(() => onError?.(error)),
     }).then((handle) => {
       if (sessionId !== playbackSessionId) {
         handle?.stop();
@@ -62,7 +58,7 @@ export function speakSarcastic(options: SpeakOptions): void {
       if (handle) {
         activePlayback = handle;
       } else {
-        fallbackToBrowser();
+        finalizePlayback(() => onError?.(new Error("Female voice playback failed")));
       }
     });
     return;
