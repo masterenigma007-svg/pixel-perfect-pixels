@@ -1,131 +1,128 @@
-# 📱 App Store Submission Guide — Relationship Saver
+# 📱 App Store Submission Checklist — Relationship Saver
 
-Your app is now cleaned up and configured for native publishing via Capacitor.
+## ✅ What's been prepared in this project
 
-## What I just changed
-- **Removed dead code**: `serverFemaleVoice.ts`, `offlineFemaleVoice.ts`, `TimeZoneClock.tsx`, `NavLink.tsx`.
-- **Female voice**: now uses the device's built-in human TTS (Samantha on iOS, Aria on Win11, Google UK Female on Android) — free, offline, no billing.
-- **Capacitor config**: removed the live-reload `server.url` (only used for dev). Added clean `appId` (`app.lovable.relationshipsaver`) and splash-screen config. **You must rebuild native projects after this.**
-- **SEO + PWA meta**: proper title, description, theme-color, apple-touch-icon, OG/Twitter tags, viewport with `viewport-fit=cover` for iPhone notch support.
+### App identity
+- **App name:** Relationship Saver
+- **Bundle ID / App ID:** `app.lovable.relationshipsaver`
+- **Version:** 1.0.0
+- **Categories:** Entertainment, Lifestyle, Social
+- **Theme color:** `#1a1330` (deep navy purple — matches splash & icon background)
+
+### Generated assets
+- **Master icon:** `src/assets/app-icon-master.jpg` (1024×1024)
+- **Web/PWA icons:** `public/icons/icon-{192,256,384,512}.png`
+- **Maskable icon:** `public/icons/maskable-512.png`
+- **Apple touch icon:** `public/apple-touch-icon.png` (180×180)
+- **Favicons:** `public/favicon.png`, `public/favicon-32.png`
+- **Marketing screenshots:** `/mnt/documents/marketing-screenshots/` (iOS 6.7" & Android sizes)
+
+### Configuration
+- **`capacitor.config.ts`** — appId, splash screen, status bar configured
+- **`public/manifest.webmanifest`** — full PWA manifest with all icon sizes
+- **`index.html`** — full SEO meta tags, Open Graph, Twitter card, JSON-LD schema, theme-color
+
+### Backend & security
+- ✅ TTS cache bucket writes locked down to service role
+- ✅ No user authentication required (no auth/RLS surface for users)
+- ✅ Privacy policy live at `/privacy` with contact email `masterenigma007@gmail.com`
 
 ---
 
-## 🏗️ Step 1 — Get the project on your computer
+## 🚀 Native build — what YOU need to do (one-time)
 
-You need a Mac for iOS, and either Mac/Windows/Linux for Android.
-
-1. In Lovable, click **GitHub → Connect to GitHub** (top right) and push the repo.
-2. On your computer:
-   ```bash
-   git clone <your-repo-url>
-   cd <project>
-   npm install
-   npm run build
-   ```
-
-## 📲 Step 2 — Add native platforms
+The Capacitor project is fully wired up in code. To produce the actual `.ipa` (iOS) and `.aab` (Android) files for submission you need to run the build on a Mac (for iOS) and/or a machine with Android Studio.
 
 ```bash
-npx cap add ios       # macOS only — needs Xcode 15+
-npx cap add android   # needs Android Studio
+# 1. Push this Lovable project to your own GitHub, then clone it locally
+git clone <your-fork-url>
+cd <project>
+npm install
+
+# 2. Add the native platforms (one-time)
+npx cap add ios
+npx cap add android
+
+# 3. Build the web assets and sync them into the native projects
+npm run build
 npx cap sync
-```
 
-Whenever you change the web code, repeat:
-```bash
-npm run build && npx cap sync
-```
-
----
-
-## 🍎 iOS — Apple App Store
-
-### Prerequisites
-- **Mac with Xcode 15+**
-- **Apple Developer Program**: $99/year — https://developer.apple.com/programs/
-- App Store Connect account (included)
-
-### Build
-```bash
+# 4a. iOS — open in Xcode, set signing team, archive, upload to App Store Connect
 npx cap open ios
-```
-Xcode will open. Then:
-1. Select the **App** target → **Signing & Capabilities** → check **Automatically manage signing** → pick your Team.
-2. Set **Bundle Identifier** to `app.lovable.relationshipsaver` (or your own reverse-domain).
-3. Set **Display Name** = `Relationship Saver`.
-4. Set **Version** = `1.0.0`, **Build** = `1`.
-5. Add an **App Icon**: drag a 1024×1024 PNG into `App/Assets.xcassets/AppIcon`.
-6. Top bar: select **Any iOS Device (arm64)** → **Product → Archive**.
-7. When the Organizer opens → **Distribute App → App Store Connect → Upload**.
 
-### Submit
-1. Go to https://appstoreconnect.apple.com → **My Apps → +** → New App.
-2. Fill: name, primary language (English), bundle ID, SKU.
-3. **App Information**: category = *Entertainment* (subcategory *Lifestyle* works too).
-4. **Age Rating**: Truth-or-Dare prompts are PG-13. Mark **12+** (Mature/Suggestive Themes = *Infrequent/Mild*, no sexual content, no nudity).
-5. **Pricing**: Free.
-6. **Privacy**: declare you collect *no* user data (everything is local-storage only). Privacy policy URL required → host a simple one (see `PRIVACY.md` template below).
-7. Add screenshots: **6.7" iPhone (1290×2796)** and **6.5" iPhone (1242×2688)**. Take from a simulator with `Cmd+S`.
-8. **App Review Information**: provide a demo account if needed (not needed here — no login).
-9. Select build → **Submit for Review**. Review takes 24–48h typically.
-
----
-
-## 🤖 Android — Google Play Store
-
-### Prerequisites
-- **Android Studio** (free) — https://developer.android.com/studio
-- **Google Play Developer**: $25 one-time — https://play.google.com/console/signup
-
-### Build a signed AAB
-```bash
+# 4b. Android — open in Android Studio, generate signed AAB, upload to Play Console
 npx cap open android
 ```
-Android Studio opens. Then:
-1. **Build → Generate Signed Bundle / APK → Android App Bundle**.
-2. Create a new keystore (save the `.jks` file and password somewhere safe — **you cannot recover it**).
-3. Select **release** variant → Finish. Output goes to `android/app/release/app-release.aab`.
-
-### App icon & branding
-- Replace `android/app/src/main/res/mipmap-*/ic_launcher.png` with your icon (use Android Studio's **Image Asset** wizard: right-click `res` → New → Image Asset).
-- Update `android/app/src/main/res/values/strings.xml` → `<string name="app_name">Relationship Saver</string>`.
-
-### Submit
-1. https://play.google.com/console → **Create app**.
-2. Default language = English (US), app name = `Relationship Saver`, type = App, Free.
-3. Complete the **Dashboard** checklist:
-   - **App content**: privacy policy URL, ads = No, content rating questionnaire (suggestive themes only, no sex/nudity → expect *Teen*), target audience = 13+, data safety = "no data collected".
-   - **Store listing**: short description (80 chars), full description (4000 chars), 2 screenshots min (phone 1080×1920+), feature graphic (1024×500), app icon (512×512).
-4. **Production → Create new release** → upload `.aab` → roll out.
 
 ---
 
-## 📄 Privacy Policy (required by both stores)
+## 📋 Apple App Store submission requirements
 
-This app collects **no personal data**. All history is stored in your browser/device localStorage. No analytics, no servers, no third parties (besides device TTS).
+| Item | Status / where |
+|---|---|
+| Apple Developer account ($99/yr) | ⚠️ You need this |
+| App Store Connect listing created | ⚠️ Manual |
+| Bundle ID matches `app.lovable.relationshipsaver` | ✅ Set in `capacitor.config.ts` |
+| App icon (1024×1024 PNG, no alpha) | ✅ `src/assets/app-icon-master.jpg` |
+| 6.7" screenshots (1290×2796) | ✅ `/mnt/documents/marketing-screenshots/ios-6.7/` |
+| Privacy policy URL | ✅ `https://pixel-perfect-clone-5302.lovable.app/privacy` |
+| Support URL | ⚠️ Reuse the privacy URL or create a contact page |
+| Age rating | Suggested: **17+** (Truth or Dare contains adult prompts) |
+| Description, keywords, promotional text | See "Listing copy" below |
+| Encryption export compliance | Select **"None of the algorithms"** unless you add custom crypto |
 
-Host this on any free static page (GitHub Pages, Notion, Carrd) and paste the URL into both store listings.
+## 📋 Google Play Store submission requirements
 
-Sample text:
-> **Relationship Saver Privacy Policy**
-> Effective: <date>
+| Item | Status / where |
+|---|---|
+| Google Play Console account ($25 one-time) | ⚠️ You need this |
+| 512×512 PNG icon | ✅ `public/icons/icon-512.png` |
+| Feature graphic (1024×500) | ⚠️ Generate one |
+| Phone screenshots (1080×2340) | ✅ `/mnt/documents/marketing-screenshots/android/` |
+| Privacy policy URL | ✅ `https://pixel-perfect-clone-5302.lovable.app/privacy` |
+| Content rating questionnaire | Answer truthfully — Truth or Dare has adult content |
+| Data safety form | All data stays in the app — no PII collected |
+
+---
+
+## ✍️ Listing copy (ready to paste)
+
+**Title (30 chars):** Relationship Saver
+
+**Subtitle (30 chars):** Translator & Couples Games
+
+**Promotional text (170 chars):**
+What does she really mean by "I'm fine"? What's he really thinking when he says "5 more minutes"? Translate it. Then play the games. Survive the relationship.
+
+**Description:**
+> 💬 **Gender Translator** — Sarcastically decode what men and women actually mean by age group. Hilarious. Painfully accurate.
 >
-> Relationship Saver does not collect, store, or share any personal information. All translation history and game state are saved locally on your device only. The app uses your device's built-in text-to-speech engine and microphone (for voice input) — neither of these transmit data off your device. Contact: <your email>.
+> 💕 **Compatibility Game** — Both partners type honest answers to questions about each other. We score adjective similarity. Pick Easy, Medium, or Hard.
+>
+> 🔥 **Truth or Dare** — Hundreds of prompts from spicy to filthy. For couples. For game nights. For "we need new material."
+>
+> Three apps in one. No ads. No subscriptions. No nonsense.
+
+**Keywords (iOS, 100 chars total):**
+couples,relationship,game,translator,truth,dare,newlywed,humor,partner,date night,sarcastic
 
 ---
 
-## ⚠️ Things to double-check before submitting
-- [ ] Replace placeholder app icons with real branded 1024×1024 (iOS) and 512×512 (Android) icons.
-- [ ] Take 4–6 screenshots on a real device or simulator for each store.
-- [ ] Host a privacy policy and have its URL ready.
-- [ ] Truth-or-Dare prompts are PG-13 → both stores will rate **12+/Teen**.
-- [ ] Test on a real device: `npx cap run ios` / `npx cap run android`.
+## 🔐 Final pre-submission checklist
+
+- [ ] Test build on a real iOS device
+- [ ] Test build on a real Android device
+- [ ] Verify Truth or Dare content matches your declared age rating
+- [ ] Generate 1024×500 Play Store feature graphic
+- [ ] Confirm `appId` matches what you registered in App Store Connect / Play Console
+- [ ] Increment `version` in package.json before each store update
 
 ---
 
-## 🔁 When you push web updates later
-Web-only changes (text, UI, prompts) → no resubmission needed if you ship them as an OTA web bundle later. For now, every change requires:
-```bash
-npm run build && npx cap sync
-```
-…then rebuild + re-upload from Xcode / Android Studio with an incremented version.
+## 🌐 Web/PWA fallback — already live
+
+Users can install the web app directly from their phone browser:
+- **iOS:** Safari → Share → Add to Home Screen
+- **Android:** Chrome → menu → Install App
+
+The PWA manifest and icons are already wired up — no service worker, no extra setup needed.
