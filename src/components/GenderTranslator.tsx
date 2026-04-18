@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { translate, suggestions } from "@/data/translations";
 import type { Direction, AgeGroup } from "@/data/translations";
 import { speakSarcastic, stopSpeaking, preloadVoices } from "@/lib/sarcasticVoiceEngine";
+import { maybeShowInterstitial } from "@/lib/monetization";
 import micIcon from "@/assets/mic-icon.png";
 import speakerIcon from "@/assets/speaker-icon.png";
 
@@ -106,6 +107,8 @@ export default function GenderTranslator() {
           saveHistory(updated);
           return updated;
         });
+        // Every 10th translation may show an interstitial (no-op on web).
+        void maybeShowInterstitial("translator");
       }, 400);
     },
     [direction, ageGroup]

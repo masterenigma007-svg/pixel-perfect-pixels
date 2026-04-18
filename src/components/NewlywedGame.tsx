@@ -1,8 +1,9 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getRandomQuestions } from "@/data/newlywedQuestions";
 import type { NewlywedQuestion } from "@/data/newlywedQuestions";
 import { compareAnswers, DIFFICULTY_THRESHOLDS, type Difficulty } from "@/lib/answerSimilarity";
+import { showBanner, hideBanner, isAdFree, maybeShowInterstitial } from "@/lib/monetization";
 
 const DIFFICULTY_META: Record<Difficulty, { label: string; emoji: string; blurb: string }> = {
   easy: { label: "Easy", emoji: "🌱", blurb: "50% similar = match. Forgiving — great for first-timers." },
@@ -86,6 +87,8 @@ export default function NewlywedGame() {
   const handleNext = () => {
     if (currentIndex + 1 >= questions.length) {
       setGameState("results");
+      // Round complete — every 10th completed round may show an interstitial.
+      void maybeShowInterstitial("newlywed");
     } else {
       setCurrentIndex((i) => i + 1);
       setP1Answer("");
@@ -97,6 +100,16 @@ export default function NewlywedGame() {
   const handlePlayAgain = () => {
     setGameState("setup");
   };
+
+  // Hide the banner during the score reveal so the payoff isn't ruined.
+  useEffect(() => {
+    if (isAdFree()) return;
+    if (gameState === "reveal" || gameState === "results") {
+      void hideBanner();
+    } else {
+      void showBanner();
+    }
+  }, [gameState]);
 
   const matches = results.filter((r) => r.isMatch).length;
   const accuracy = results.length
