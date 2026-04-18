@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { Settings as SettingsIcon } from "lucide-react";
 import GenderTranslator from "@/components/GenderTranslator";
 import NewlywedGame from "@/components/NewlywedGame";
 import TruthOrDare from "@/components/TruthOrDare";
+import { showBanner, hideBanner, isAdFree, onAdFreeChange } from "@/lib/monetization";
 import translatorIcon from "@/assets/translator-hero.jpg";
 import newlywedIcon from "@/assets/compatibility-hero.gif";
 import truthOrDareIcon from "@/assets/truthordare-hero.jpg";
