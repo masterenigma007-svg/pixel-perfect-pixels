@@ -209,23 +209,23 @@ export async function purchaseRemoveAds(): Promise<PurchaseResult> {
     };
   }
   try {
-    const { Purchases } = await import("@capgo/capacitor-purchases");
-    const result: any = await Purchases.purchaseProduct({
+    const { Subscriptions } = await import("@squareetlabs/capacitor-subscriptions");
+    const result = await Subscriptions.purchaseProduct({
       productIdentifier: REMOVE_ADS_PRODUCT_ID,
-      productType: 1, // 1 = non-consumable / non-renewing
     });
-    // Plugin shapes vary by version — be defensive.
-    const ok = result?.customerInfo?.entitlements?.active
-      ? Object.keys(result.customerInfo.entitlements.active).length > 0
-      : true;
-    if (ok) {
-      setAdFree(true);
-      return { ok: true, message: "Ads removed. Thank you for supporting the app! 💛" };
+    // Code 0 = success on both platforms (iOS) / popover opened (Android — the
+    // real result fires via the ANDROID-PURCHASE-RESPONSE listener registered below).
+    if (result.responseCode === 0) {
+      // Verify entitlement immediately on iOS; on Android we'll re-check via listener.
+      await refreshPurchaseStatus();
+      if (adFree) {
+        return { ok: true, message: "Ads removed. Thank you for supporting the app! 💛" };
+      }
+      return { ok: true, message: "Purchase started. Ads will be removed once it completes." };
     }
-    return { ok: false, message: "Purchase did not complete." };
+    return { ok: false, message: result.responseMessage || "Purchase did not complete." };
   } catch (e: any) {
-    const msg = e?.message || "Purchase cancelled or failed.";
-    return { ok: false, message: msg };
+    return { ok: false, message: e?.message || "Purchase cancelled or failed." };
   }
 }
 
@@ -233,19 +233,15 @@ export async function restorePurchases(): Promise<PurchaseResult> {
   if (!isNative) {
     return {
       ok: false,
-      message:
-        "Restore Purchases only works in the native iOS/Android build.",
+      message: "Restore Purchases only works in the native iOS/Android build.",
     };
   }
   try {
-    const { Purchases } = await import("@capgo/capacitor-purchases");
-    const info: any = await Purchases.restorePurchases();
-    const active = info?.customerInfo?.entitlements?.active ?? {};
-    const hasRemoveAds =
-      Object.keys(active).length > 0 ||
-      (Array.isArray(info?.activeSubscriptions) &&
-        info.activeSubscriptions.some((id: string) => id === REMOVE_ADS_PRODUCT_ID));
-    if (hasRemoveAds) {
+    const { Subscriptions } = await import("@squareetlabs/capacitor-subscriptions");
+    const result = await Subscriptions.getCurrentEntitlements();
+    if (result.responseCode === 0 && result.data?.some(
+      (t) => t.productIdentifier === REMOVE_ADS_PRODUCT_ID
+    )) {
       setAdFree(true);
       return { ok: true, message: "Purchases restored. Ads removed." };
     }
@@ -258,12 +254,25 @@ export async function restorePurchases(): Promise<PurchaseResult> {
 async function refreshPurchaseStatus(): Promise<void> {
   if (!isNative) return;
   try {
-    const { Purchases } = await import("@capgo/capacitor-purchases");
-    const info: any = await Purchases.getCustomerInfo?.();
-    const active = info?.customerInfo?.entitlements?.active ?? info?.entitlements?.active;
-    if (active && Object.keys(active).length > 0) {
+    const { Subscriptions } = await import("@squareetlabs/capacitor-subscriptions");
+    const result = await Subscriptions.getCurrentEntitlements();
+    if (
+      result.responseCode === 0 &&
+      result.data?.some((t) => t.productIdentifier === REMOVE_ADS_PRODUCT_ID)
+    ) {
       setAdFree(true);
+      return;
     }
+    // Android: also listen for the async purchase callback once.
+    Subscriptions.addListener("ANDROID-PURCHASE-RESPONSE", async () => {
+      const r = await Subscriptions.getCurrentEntitlements();
+      if (
+        r.responseCode === 0 &&
+        r.data?.some((t) => t.productIdentifier === REMOVE_ADS_PRODUCT_ID)
+      ) {
+        setAdFree(true);
+      }
+    });
   } catch {
     /* ignore — fall back to localStorage flag */
   }
