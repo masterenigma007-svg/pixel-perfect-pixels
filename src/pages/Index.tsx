@@ -77,6 +77,13 @@ const Index = () => {
               )}
             </button>
           ))}
+          <Link
+            to="/settings"
+            aria-label="Settings"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <SettingsIcon className="w-5 h-5" />
+          </Link>
         </div>
       </div>
 
