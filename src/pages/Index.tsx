@@ -14,6 +14,25 @@ type Tab = "translator" | "game" | "tod";
 
 const Index = () => {
   const [tab, setTab] = useState<Tab>("translator");
+  const [adFree, setAdFree] = useState(isAdFree());
+
+  useEffect(() => onAdFreeChange(setAdFree), []);
+
+  // Banner policy:
+  //  - Translator: always on (when not ad-free)
+  //  - Compatibility: on (the game itself hides it during the score reveal)
+  //  - Truth or Dare: NEVER show banner
+  useEffect(() => {
+    if (adFree) {
+      void hideBanner();
+      return;
+    }
+    if (tab === "tod") {
+      void hideBanner();
+    } else {
+      void showBanner();
+    }
+  }, [tab, adFree]);
 
   const tabs: { id: Tab; label: string; icon: string; animated?: boolean }[] = [
     { id: "translator", label: "Translator", icon: translatorIcon },
