@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { Settings as SettingsIcon } from "lucide-react";
 import GenderTranslator from "@/components/GenderTranslator";
 import NewlywedGame from "@/components/NewlywedGame";
 import TruthOrDare from "@/components/TruthOrDare";
+import { showBanner, hideBanner, isAdFree, onAdFreeChange } from "@/lib/monetization";
 import translatorIcon from "@/assets/translator-hero.jpg";
 import newlywedIcon from "@/assets/compatibility-hero.gif";
 import truthOrDareIcon from "@/assets/truthordare-hero.jpg";
@@ -12,6 +14,25 @@ type Tab = "translator" | "game" | "tod";
 
 const Index = () => {
   const [tab, setTab] = useState<Tab>("translator");
+  const [adFree, setAdFree] = useState(isAdFree());
+
+  useEffect(() => onAdFreeChange(setAdFree), []);
+
+  // Banner policy:
+  //  - Translator: always on (when not ad-free)
+  //  - Compatibility: on (the game itself hides it during the score reveal)
+  //  - Truth or Dare: NEVER show banner
+  useEffect(() => {
+    if (adFree) {
+      void hideBanner();
+      return;
+    }
+    if (tab === "tod") {
+      void hideBanner();
+    } else {
+      void showBanner();
+    }
+  }, [tab, adFree]);
 
   const tabs: { id: Tab; label: string; icon: string; animated?: boolean }[] = [
     { id: "translator", label: "Translator", icon: translatorIcon },
@@ -22,7 +43,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-lg mx-auto flex">
+        <div className="max-w-lg mx-auto flex items-stretch relative">
           {tabs.map((t) => (
             <button
               key={t.id}
@@ -56,6 +77,13 @@ const Index = () => {
               )}
             </button>
           ))}
+          <Link
+            to="/settings"
+            aria-label="Settings"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <SettingsIcon className="w-5 h-5" />
+          </Link>
         </div>
       </div>
 

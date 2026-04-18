@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TRUTHS, DARES, pickRandom, type TodPrompt } from "@/data/truthOrDarePrompts";
 import { Slider } from "@/components/ui/slider";
+import { maybeShowInterstitial } from "@/lib/monetization";
 
 
 type Stage = "setup" | "choose" | "prompt";
@@ -33,6 +34,8 @@ export default function TruthOrDare() {
     setTurn((t) => (t === 0 ? 1 : 0));
     setCurrent(null);
     setStage("choose");
+    // Every 10th completed prompt may show an interstitial.
+    void maybeShowInterstitial("tod");
   };
 
   return (
