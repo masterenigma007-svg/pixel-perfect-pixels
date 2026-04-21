@@ -275,12 +275,31 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
     return !oppositeNames.some((opposite) => name.includes(opposite));
   });
 
+  // For the female voice, strictly prefer British (en-GB) voices so the
+  // delivery has a clear British accent. Fall back to other English-accented
+  // voices (AU/IE) before US, and only then to anything English.
+  const britishCandidates = candidates.filter((v) => {
+    const lang = v.lang.toLowerCase();
+    return lang.startsWith("en-gb") || lang.startsWith("en-uk");
+  });
+  const britishIshCandidates = candidates.filter((v) => {
+    const lang = v.lang.toLowerCase();
+    return (
+      lang.startsWith("en-gb") ||
+      lang.startsWith("en-uk") ||
+      lang.startsWith("en-ie") ||
+      lang.startsWith("en-au")
+    );
+  });
+
   const preferredPool = wantFemale
-    ? candidates.filter(isBritishFemaleVoice).length
-      ? candidates.filter(isBritishFemaleVoice)
-      : candidates.filter(isNeuralVoice).length
-        ? candidates.filter(isNeuralVoice)
-        : candidates
+    ? britishCandidates.length
+      ? britishCandidates
+      : britishIshCandidates.length
+        ? britishIshCandidates
+        : candidates.filter(isNeuralVoice).length
+          ? candidates.filter(isNeuralVoice)
+          : candidates
     : candidates;
 
   const scored = preferredPool
