@@ -275,12 +275,31 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
     return !oppositeNames.some((opposite) => name.includes(opposite));
   });
 
+  // For the female voice, strictly prefer British (en-GB) voices so the
+  // delivery has a clear British accent. Fall back to other English-accented
+  // voices (AU/IE) before US, and only then to anything English.
+  const britishCandidates = candidates.filter((v) => {
+    const lang = v.lang.toLowerCase();
+    return lang.startsWith("en-gb") || lang.startsWith("en-uk");
+  });
+  const britishIshCandidates = candidates.filter((v) => {
+    const lang = v.lang.toLowerCase();
+    return (
+      lang.startsWith("en-gb") ||
+      lang.startsWith("en-uk") ||
+      lang.startsWith("en-ie") ||
+      lang.startsWith("en-au")
+    );
+  });
+
   const preferredPool = wantFemale
-    ? candidates.filter(isBritishFemaleVoice).length
-      ? candidates.filter(isBritishFemaleVoice)
-      : candidates.filter(isNeuralVoice).length
-        ? candidates.filter(isNeuralVoice)
-        : candidates
+    ? britishCandidates.length
+      ? britishCandidates
+      : britishIshCandidates.length
+        ? britishIshCandidates
+        : candidates.filter(isNeuralVoice).length
+          ? candidates.filter(isNeuralVoice)
+          : candidates
     : candidates;
 
   const scored = preferredPool
@@ -292,11 +311,11 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
 
 function getSarcasticProfile(direction: Direction, voice: SpeechSynthesisVoice | null): VoiceProfile {
   if (direction === "menToWomen") {
-    // Slightly slower + warmer pitch so the female delivery sounds human and
-    // knowing rather than flat. Neural voices need less nudging.
+    // Warmer, slower delivery with a touch lower pitch for a richer, more
+    // human British timbre (think dry, knowing British sarcasm).
     return isNeuralVoice(voice as SpeechSynthesisVoice)
-      ? { rate: 0.95, pitch: 1.0, volume: 1.0 }
-      : { rate: 0.93, pitch: 1.03, volume: 1.0 };
+      ? { rate: 0.92, pitch: 0.96, volume: 1.0 }
+      : { rate: 0.9, pitch: 0.98, volume: 1.0 };
   }
 
   return { rate: 0.9, pitch: 1.05, volume: 1.0 };
@@ -337,7 +356,9 @@ export function speakWithBrowserTts(options: BrowserSpeakOptions): SpeechPlaybac
 
   if (voice) {
     utterance.voice = voice;
-    utterance.lang = voice.lang;
+    // For the female voice, always force en-GB so the engine renders with a
+    // British accent even when the chosen voice reports a generic locale.
+    utterance.lang = direction === "menToWomen" ? "en-GB" : voice.lang;
   } else {
     utterance.lang = "en-GB";
   }
