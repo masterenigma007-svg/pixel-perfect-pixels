@@ -311,11 +311,11 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
 
 function getSarcasticProfile(direction: Direction, voice: SpeechSynthesisVoice | null): VoiceProfile {
   if (direction === "menToWomen") {
-    // Slightly slower + warmer pitch so the female delivery sounds human and
-    // knowing rather than flat. Neural voices need less nudging.
+    // Warmer, slower delivery with a touch lower pitch for a richer, more
+    // human British timbre (think dry, knowing British sarcasm).
     return isNeuralVoice(voice as SpeechSynthesisVoice)
-      ? { rate: 0.95, pitch: 1.0, volume: 1.0 }
-      : { rate: 0.93, pitch: 1.03, volume: 1.0 };
+      ? { rate: 0.92, pitch: 0.96, volume: 1.0 }
+      : { rate: 0.9, pitch: 0.98, volume: 1.0 };
   }
 
   return { rate: 0.9, pitch: 1.05, volume: 1.0 };
