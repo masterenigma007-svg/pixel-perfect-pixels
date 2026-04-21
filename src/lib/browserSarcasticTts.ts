@@ -292,12 +292,28 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
 
 function getSarcasticProfile(direction: Direction, voice: SpeechSynthesisVoice | null): VoiceProfile {
   if (direction === "menToWomen") {
+    // Slightly slower + warmer pitch so the female delivery sounds human and
+    // knowing rather than flat. Neural voices need less nudging.
     return isNeuralVoice(voice as SpeechSynthesisVoice)
-      ? { rate: 0.97, pitch: 0.99, volume: 1.0 }
-      : { rate: 0.98, pitch: 1.01, volume: 1.0 };
+      ? { rate: 0.95, pitch: 1.0, volume: 1.0 }
+      : { rate: 0.93, pitch: 1.03, volume: 1.0 };
   }
 
   return { rate: 0.9, pitch: 1.05, volume: 1.0 };
+}
+
+/**
+ * Lightly rewrites text so a single SpeechSynthesisUtterance still has natural
+ * human cadence: ensures end punctuation, gives commas a touch more room, and
+ * adds a tiny breath before sarcastic conjunctions.
+ */
+function humanizeFemaleText(text: string): string {
+  let out = text.replace(/\s+/g, " ").trim();
+  if (!out) return out;
+  if (!/[.!?…]$/.test(out)) out += ".";
+  out = out.replace(/\b(but|though|however|obviously|clearly|sure)\b/gi, ", $1");
+  out = out.replace(/,\s*,/g, ",");
+  return out;
 }
 
 export function speakWithBrowserTts(options: BrowserSpeakOptions): SpeechPlaybackHandle | null {
@@ -307,19 +323,11 @@ export function speakWithBrowserTts(options: BrowserSpeakOptions): SpeechPlaybac
   const voice = selectVoice(direction);
   const profile = getSarcasticProfile(direction, voice);
 
-  if (direction === "menToWomen") {
-    return speakWithHumanFemaleCadence({
-      text,
-      direction,
-      voice,
-      profile,
-      onStart,
-      onEnd,
-      onError,
-    });
-  }
+  // Add subtle natural pauses for the female voice to sound more human,
+  // without breaking the single-utterance pathway used by the male voice.
+  const spokenText = direction === "menToWomen" ? humanizeFemaleText(text) : text;
 
-  const utterance = new SpeechSynthesisUtterance(text);
+  const utterance = new SpeechSynthesisUtterance(spokenText);
 
   let stopped = false;
 
