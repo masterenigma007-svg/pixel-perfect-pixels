@@ -307,19 +307,11 @@ export function speakWithBrowserTts(options: BrowserSpeakOptions): SpeechPlaybac
   const voice = selectVoice(direction);
   const profile = getSarcasticProfile(direction, voice);
 
-  if (direction === "menToWomen") {
-    return speakWithHumanFemaleCadence({
-      text,
-      direction,
-      voice,
-      profile,
-      onStart,
-      onEnd,
-      onError,
-    });
-  }
+  // Add subtle natural pauses for the female voice to sound more human,
+  // without breaking the single-utterance pathway used by the male voice.
+  const spokenText = direction === "menToWomen" ? humanizeFemaleText(text) : text;
 
-  const utterance = new SpeechSynthesisUtterance(text);
+  const utterance = new SpeechSynthesisUtterance(spokenText);
 
   let stopped = false;
 
