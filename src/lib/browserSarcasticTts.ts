@@ -356,7 +356,9 @@ export function speakWithBrowserTts(options: BrowserSpeakOptions): SpeechPlaybac
 
   if (voice) {
     utterance.voice = voice;
-    utterance.lang = voice.lang;
+    // For the female voice, always force en-GB so the engine renders with a
+    // British accent even when the chosen voice reports a generic locale.
+    utterance.lang = direction === "menToWomen" ? "en-GB" : voice.lang;
   } else {
     utterance.lang = "en-GB";
   }
