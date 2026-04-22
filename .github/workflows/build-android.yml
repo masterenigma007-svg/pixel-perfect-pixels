@@ -34,10 +34,13 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then
-            npm ci
+            npm ci --legacy-peer-deps || {
+              echo "npm ci failed because package-lock.json is out of sync; falling back to npm install"
+              npm install --legacy-peer-deps
+            }
           else
             echo "No package-lock.json found, falling back to npm install"
-            npm install
+            npm install --legacy-peer-deps
           fi
 
       - name: Build web assets
@@ -45,7 +48,6 @@ jobs:
 
       - name: Add Android platform
         run: |
-          npm install @capacitor/android
           npx cap add android || echo "android platform already exists"
           npx cap sync android
 
