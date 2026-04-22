@@ -28,8 +28,17 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      - name: Clean npm cache
+        run: npm cache clean --force
+
       - name: Install dependencies
-        run: npm install
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            echo "No package-lock.json found, falling back to npm install"
+            npm install
+          fi
 
       - name: Build web assets
         run: npm run build
