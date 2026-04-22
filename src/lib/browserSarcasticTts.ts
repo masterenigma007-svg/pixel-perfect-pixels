@@ -312,7 +312,11 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
         : candidates.filter(isNeuralVoice).length
           ? candidates.filter(isNeuralVoice)
           : candidates
-    : candidates;
+    : britishCandidates.length
+      ? britishCandidates
+      : britishIshCandidates.length
+        ? britishIshCandidates
+        : candidates;
 
   const scored = preferredPool
     .map((voice) => ({ voice, score: scoreVoice(voice, direction, targetNames) }))
