@@ -293,7 +293,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const hash = await sha256Hex(text);
+    const hash = await sha256Hex(`female:${text}`);
     const path = `${hash}.mp3`;
     const url = publicUrlFor(path);
 
@@ -315,7 +315,6 @@ Deno.serve(async (req) => {
     // → VoiceRSS demo → Google fallback. ElevenLabs is the most human option.
     const providers: Array<{ name: string; fn: () => Promise<Uint8Array | null> }> = [
       { name: "elevenlabs", fn: () => fetchElevenLabs(text) },
-      { name: "lovable", fn: () => fetchLovableTts(text) },
       { name: "voicerss", fn: () => fetchVoiceRss(text) },
     ];
 
