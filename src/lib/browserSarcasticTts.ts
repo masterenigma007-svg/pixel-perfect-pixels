@@ -266,13 +266,25 @@ function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
   const wantFemale = direction === "menToWomen";
   const targetNames = wantFemale ? FEMALE_NAMES : MALE_NAMES;
-  const oppositeNames = wantFemale ? MALE_NAMES : FEMALE_NAMES;
+  // Use explicit opposite-gender markers only. Avoid generic tokens like "male"
+  // (which would match "female") and ambiguous first names that exist for both
+  // genders across platforms.
+  const oppositeNames = wantFemale
+    ? ["male", "ryan", "george", "daniel", "alex", "tom", "james", "fred", "guy", "reed", "aaron", "arthur", "oliver", "brian", "thomas", "david", "mark"]
+    : ["female", "libby", "sonia", "hollie", "maisie", "aria", "jenny", "ava", "emma", "michelle", "zira", "kate", "serena", "fiona", "moira", "tessa", "karen", "victoria", "samantha", "alice", "hazel", "susan", "allison"];
 
   const englishVoices = voices.filter((voice) => voice.lang.toLowerCase().startsWith("en"));
 
   const candidates = englishVoices.filter((voice) => {
     const name = voice.name.toLowerCase();
-    return !oppositeNames.some((opposite) => name.includes(opposite));
+    // Exclude opposite-gender voices, but be careful: "female" contains "male",
+    // so check female markers FIRST when filtering for male voices.
+    if (!wantFemale && name.includes("female")) return false;
+    return !oppositeNames.some((opposite) => {
+      // Word-boundary-ish check to avoid "male" matching "female"
+      const regex = new RegExp(`\\b${opposite}\\b`, "i");
+      return regex.test(name);
+    });
   });
 
   // For the female voice, strictly prefer British (en-GB) voices so the
