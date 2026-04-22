@@ -18,9 +18,10 @@ const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY") ?? "";
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") ?? "";
 const BUCKET = "tts-cache";
 
-// Sarah — warm, expressive, slightly sarcastic-friendly female voice
-const ELEVEN_VOICE_ID = "EXAVITQu4vr4xnSDxMaL";
-const ELEVEN_MODEL = "eleven_turbo_v2_5";
+// Lily — warm British female voice (genuinely human, slightly sarcastic-ready)
+const ELEVEN_VOICE_ID = "pFZP5JQG7iQjIQuC4Bku";
+// Multilingual v2 = highest quality / most human (worth the small latency cost)
+const ELEVEN_MODEL = "eleven_multilingual_v2";
 
 // Lovable AI Gateway → OpenAI TTS (free during promo, no extra key needed)
 // "shimmer" = warm, expressive female; great for sarcastic delivery
@@ -125,10 +126,11 @@ async function fetchElevenLabs(text: string): Promise<Uint8Array | null> {
           text,
           model_id: ELEVEN_MODEL,
           voice_settings: {
-            stability: 0.35,
-            similarity_boost: 0.75,
-            style: 0.65,
+            stability: 0.45,
+            similarity_boost: 0.85,
+            style: 0.55,
             use_speaker_boost: true,
+            speed: 0.95,
           },
         }),
       }
@@ -309,10 +311,12 @@ Deno.serve(async (req) => {
 
     console.log(`[female-tts] cache MISS ${hash.slice(0, 8)} — generating`);
 
-    // Provider chain: VoiceRSS (free demo, human "Linda") → ElevenLabs → Google fallback
+    // Provider chain: ElevenLabs (Lily, premium British female) → Lovable AI (shimmer)
+    // → VoiceRSS demo → Google fallback. ElevenLabs is the most human option.
     const providers: Array<{ name: string; fn: () => Promise<Uint8Array | null> }> = [
-      { name: "voicerss", fn: () => fetchVoiceRss(text) },
       { name: "elevenlabs", fn: () => fetchElevenLabs(text) },
+      { name: "lovable", fn: () => fetchLovableTts(text) },
+      { name: "voicerss", fn: () => fetchVoiceRss(text) },
     ];
 
     for (const provider of providers) {
