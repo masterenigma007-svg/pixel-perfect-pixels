@@ -140,33 +140,59 @@ function chunkText(text: string): string[] {
   return parts;
 }
 
-async function fetchGoogleChunk(text: string): Promise<Uint8Array> {
-  const url =
-    "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-GB&q=" +
-    encodeURIComponent(text);
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      Referer: "https://translate.google.com/",
-      Accept: "audio/mpeg, */*",
-    },
-  });
+async function fetchTtsMp3(text: string): Promise<Uint8Array | null> {
+  try {
+    const createRes = await fetch("https://ttsmp3.com/makemp3_new.php", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Referer: "https://ttsmp3.com/",
+        Accept: "application/json, text/plain, */*",
+      },
+      body: new URLSearchParams({
+        msg: text,
+        lang: "Brian",
+        source: "ttsmp3",
+      }),
+    });
 
-  if (!res.ok) throw new Error(`Google TTS failed: ${res.status}`);
-  return new Uint8Array(await res.arrayBuffer());
-}
+    if (!createRes.ok) {
+      const errText = await createRes.text();
+      console.warn(`[male-tts] ttsmp3 create ${createRes.status}: ${errText}`);
+      return null;
+    }
 
-function concat(chunks: Uint8Array[]): Uint8Array {
-  const total = chunks.reduce((n, c) => n + c.length, 0);
-  const out = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    out.set(chunk, offset);
-    offset += chunk.length;
+    const payload = await createRes.json() as { Error?: number; URL?: string; MP3?: string };
+    const mp3Url = payload.URL?.replace(/\\\//g, "/") ?? (payload.MP3 ? `https://ttsmp3.com/created_mp3/${payload.MP3}` : null);
+    if (payload.Error || !mp3Url) {
+      console.warn("[male-tts] ttsmp3 missing audio URL", payload);
+      return null;
+    }
+
+    const audioRes = await fetch(mp3Url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Referer: "https://ttsmp3.com/",
+        Accept: "audio/mpeg, */*",
+      },
+    });
+
+    if (!audioRes.ok) {
+      const errText = await audioRes.text();
+      console.warn(`[male-tts] ttsmp3 audio ${audioRes.status}: ${errText}`);
+      return null;
+    }
+
+    return new Uint8Array(await audioRes.arrayBuffer());
+  } catch (err) {
+    console.warn("[male-tts] ttsmp3 exception:", err);
+    return null;
   }
-  return out;
 }
 
 Deno.serve(async (req) => {
@@ -183,7 +209,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const hash = await sha256Hex(`male:${text}`);
+    const hash = await sha256Hex(`male:british-v2:${text}`);
     const path = `${hash}.mp3`;
     const url = publicUrlFor(path);
 
@@ -228,37 +254,31 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.warn("[male-tts] ElevenLabs failed; using Google fallback");
-    const chunks = chunkText(text);
-    if (!chunks.length) {
-      return new Response(JSON.stringify({ error: "Empty text" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    console.warn("[male-tts] ElevenLabs failed; using ttsmp3 Brian fallback");
+    const fallbackAudio = await fetchTtsMp3(text);
+    if (!fallbackAudio || fallbackAudio.length === 0) {
+      throw new Error("Male British TTS generation failed");
     }
 
-    const buffers: Uint8Array[] = [];
-    for (const chunk of chunks) buffers.push(await fetchGoogleChunk(chunk));
-    const merged = concat(buffers);
-
+    console.log(`[male-tts] ttsmp3 success: ${fallbackAudio.length} bytes`);
     try {
-      await cachePut(path, merged);
+      await cachePut(path, fallbackAudio);
       return new Response(JSON.stringify({ url, cached: false }), {
         status: 200,
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
-          "X-TTS-Provider": "google-fallback",
+          "X-TTS-Provider": "ttsmp3-brian",
         },
       });
     } catch {
-      return new Response(merged, {
+      return new Response(fallbackAudio, {
         status: 200,
         headers: {
           ...corsHeaders,
           "Content-Type": "audio/mpeg",
           "Cache-Control": "no-store",
-          "X-TTS-Provider": "google-fallback-direct",
+          "X-TTS-Provider": "ttsmp3-brian-direct",
         },
       });
     }

@@ -1,5 +1,5 @@
 import type { Direction } from "@/data/translations";
-import { preloadBrowserVoices, speakWithBrowserTts, type SpeechPlaybackHandle } from "@/lib/browserSarcasticTts";
+import { preloadBrowserVoices, type SpeechPlaybackHandle } from "@/lib/browserSarcasticTts";
 import { prepareSpeechText } from "@/lib/speechTextUtils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -28,6 +28,12 @@ function speakWithEdgeFunction(
   let stopped = false;
   let audio: HTMLAudioElement | null = null;
 
+  const failPlayback = (error: unknown) => {
+    if (stopped) return;
+    console.warn("[voice] Edge TTS failed; browser fallback disabled to preserve correct gender", error);
+    onError?.(error);
+  };
+
   (async () => {
     try {
       const { data, error } = await supabase.functions.invoke(functionName, {
@@ -48,16 +54,11 @@ function speakWithEdgeFunction(
         if (!stopped) onEnd?.();
       };
       audio.onerror = (e) => {
-        if (!stopped) {
-          // Fallback to browser TTS on playback error
-          activePlayback = speakWithBrowserTts({ text, direction, onStart, onEnd, onError });
-        }
+        failPlayback(e);
       };
       await audio.play();
     } catch (err) {
-      if (stopped) return;
-      console.warn("[voice] Edge TTS failed, falling back to browser TTS", err);
-      activePlayback = speakWithBrowserTts({ text, direction, onStart, onEnd, onError });
+      failPlayback(err);
     }
   })();
 
@@ -130,5 +131,5 @@ export function preloadVoices(): void {
 }
 
 export function preloadOfflineFemaleVoice(): void {
-  // No-op: voices use cloud TTS functions with browser TTS fallback.
+  // No-op: voices use cloud TTS functions only.
 }

@@ -147,121 +147,59 @@ async function fetchElevenLabs(text: string): Promise<Uint8Array | null> {
   }
 }
 
-// ── VoiceRSS (FREE demo key, no signup, real human voices) ────
-// "Linda" = warm American female. Limit ~350 chars per call on demo key,
-// so we chunk and concatenate.
-const VOICERSS_MAX = 300;
-
-function chunkForVoiceRss(text: string): string[] {
-  const clean = text.replace(/\s+/g, " ").trim();
-  if (!clean) return [];
-  if (clean.length <= VOICERSS_MAX) return [clean];
-  const parts: string[] = [];
-  const sentences = clean.match(/[^.!?]+[.!?]?/g) ?? [clean];
-  let current = "";
-  for (const s of sentences) {
-    const t = s.trim();
-    if (!t) continue;
-    if ((current + " " + t).trim().length <= VOICERSS_MAX) {
-      current = (current ? current + " " : "") + t;
-    } else {
-      if (current) parts.push(current);
-      current = t.length <= VOICERSS_MAX ? t : t.slice(0, VOICERSS_MAX);
-    }
-  }
-  if (current) parts.push(current);
-  return parts;
-}
-
-async function fetchVoiceRssChunk(text: string): Promise<Uint8Array | null> {
+async function fetchTtsMp3(text: string): Promise<Uint8Array | null> {
   try {
-    const url =
-      "https://api.voicerss.org/?key=demo&hl=en-us&v=Linda&c=MP3&f=44khz_16bit_stereo&r=-2&src=" +
-      encodeURIComponent(text);
-    const res = await fetch(url, {
-      headers: { Accept: "audio/mpeg, */*" },
+    const createRes = await fetch("https://ttsmp3.com/makemp3_new.php", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Referer: "https://ttsmp3.com/",
+        Accept: "application/json, text/plain, */*",
+      },
+      body: new URLSearchParams({
+        msg: text,
+        lang: "Amy",
+        source: "ttsmp3",
+      }),
     });
-    if (!res.ok) {
-      console.warn(`[female-tts] VoiceRSS ${res.status}`);
+
+    if (!createRes.ok) {
+      const errText = await createRes.text();
+      console.warn(`[female-tts] ttsmp3 create ${createRes.status}: ${errText}`);
       return null;
     }
-    const buf = new Uint8Array(await res.arrayBuffer());
-    // VoiceRSS returns text errors with 200 status sometimes
-    if (buf.length < 500) {
-      const txt = new TextDecoder().decode(buf);
-      console.warn(`[female-tts] VoiceRSS suspicious payload: ${txt}`);
+
+    const payload = await createRes.json() as { Error?: number; URL?: string; MP3?: string };
+    const mp3Url = payload.URL?.replace(/\\\//g, "/") ?? (payload.MP3 ? `https://ttsmp3.com/created_mp3/${payload.MP3}` : null);
+    if (payload.Error || !mp3Url) {
+      console.warn("[female-tts] ttsmp3 missing audio URL", payload);
       return null;
     }
-    return buf;
+
+    const audioRes = await fetch(mp3Url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Referer: "https://ttsmp3.com/",
+        Accept: "audio/mpeg, */*",
+      },
+    });
+
+    if (!audioRes.ok) {
+      const errText = await audioRes.text();
+      console.warn(`[female-tts] ttsmp3 audio ${audioRes.status}: ${errText}`);
+      return null;
+    }
+
+    return new Uint8Array(await audioRes.arrayBuffer());
   } catch (err) {
-    console.warn("[female-tts] VoiceRSS exception:", err);
+    console.warn("[female-tts] ttsmp3 exception:", err);
     return null;
   }
-}
-
-async function fetchVoiceRss(text: string): Promise<Uint8Array | null> {
-  const chunks = chunkForVoiceRss(text);
-  if (!chunks.length) return null;
-  const buffers: Uint8Array[] = [];
-  for (const c of chunks) {
-    const buf = await fetchVoiceRssChunk(c);
-    if (!buf) return null;
-    buffers.push(buf);
-  }
-  return concat(buffers);
-}
-
-// ── Google fallback ───────────────────────────────────────────
-function chunkText(text: string): string[] {
-  const clean = text.replace(/\s+/g, " ").trim();
-  if (!clean) return [];
-  if (clean.length <= MAX_CHUNK) return [clean];
-  const parts: string[] = [];
-  const sentences = clean.match(/[^.!?]+[.!?]?/g) ?? [clean];
-  let current = "";
-  for (const sentence of sentences) {
-    const s = sentence.trim();
-    if (!s) continue;
-    if ((current + " " + s).trim().length <= MAX_CHUNK) {
-      current = (current ? current + " " : "") + s;
-    } else {
-      if (current) parts.push(current);
-      if (s.length <= MAX_CHUNK) {
-        current = s;
-      } else {
-        const words = s.split(" ");
-        let buf = "";
-        for (const w of words) {
-          if ((buf + " " + w).trim().length <= MAX_CHUNK) {
-            buf = (buf ? buf + " " : "") + w;
-          } else {
-            if (buf) parts.push(buf);
-            buf = w;
-          }
-        }
-        current = buf;
-      }
-    }
-  }
-  if (current) parts.push(current);
-  return parts;
-}
-
-async function fetchGoogleChunk(text: string): Promise<Uint8Array> {
-  const url =
-    "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-GB&q=" +
-    encodeURIComponent(text);
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      Referer: "https://translate.google.com/",
-      Accept: "audio/mpeg, */*",
-    },
-  });
-  if (!res.ok) throw new Error(`Google TTS failed: ${res.status}`);
-  return new Uint8Array(await res.arrayBuffer());
 }
 
 function concat(chunks: Uint8Array[]): Uint8Array {
@@ -293,7 +231,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const hash = await sha256Hex(`female:${text}`);
+    const hash = await sha256Hex(`female:british-v2:${text}`);
     const path = `${hash}.mp3`;
     const url = publicUrlFor(path);
 
@@ -311,11 +249,10 @@ Deno.serve(async (req) => {
 
     console.log(`[female-tts] cache MISS ${hash.slice(0, 8)} — generating`);
 
-    // Provider chain: ElevenLabs (Lily, premium British female) → Lovable AI (shimmer)
-    // → VoiceRSS demo → Google fallback. ElevenLabs is the most human option.
+    // Provider chain: ElevenLabs (Lily, premium British female) → ttsmp3 Amy.
     const providers: Array<{ name: string; fn: () => Promise<Uint8Array | null> }> = [
       { name: "elevenlabs", fn: () => fetchElevenLabs(text) },
-      { name: "voicerss", fn: () => fetchVoiceRss(text) },
+      { name: "ttsmp3-amy", fn: () => fetchTtsMp3(text) },
     ];
 
     for (const provider of providers) {
@@ -346,39 +283,7 @@ Deno.serve(async (req) => {
         }
       }
     }
-
-    console.warn("[female-tts] All premium providers failed; using Google fallback");
-    const chunks = chunkText(text);
-    if (!chunks.length) {
-      return new Response(JSON.stringify({ error: "Empty text" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const buffers: Uint8Array[] = [];
-    for (const c of chunks) buffers.push(await fetchGoogleChunk(c));
-    const merged = concat(buffers);
-    try {
-      await cachePut(path, merged);
-      return new Response(JSON.stringify({ url, cached: false }), {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-          "X-TTS-Provider": "google-fallback",
-        },
-      });
-    } catch {
-      return new Response(merged, {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "audio/mpeg",
-          "Cache-Control": "no-store",
-          "X-TTS-Provider": "google-fallback-direct",
-        },
-      });
-    }
+    throw new Error("Female British TTS generation failed");
   } catch (err) {
     console.error("[female-tts] error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
