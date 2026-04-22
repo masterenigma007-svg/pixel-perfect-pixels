@@ -6,10 +6,10 @@
       "name": "vite_react_shadcn_ts",
       "dependencies": {
         "@capacitor-community/admob": "^7.0.3",
-        "@capacitor/android": "^8.3.0",
-        "@capacitor/cli": "^8.3.0",
-        "@capacitor/core": "^8.3.0",
-        "@capacitor/ios": "^8.3.0",
+        "@capacitor/android": "^7.6.2",
+        "@capacitor/cli": "^7.6.2",
+        "@capacitor/core": "^7.6.2",
+        "@capacitor/ios": "^7.6.2",
         "@hookform/resolvers": "^3.10.0",
         "@radix-ui/react-accordion": "^1.2.11",
         "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -103,13 +103,13 @@
 
     "@capacitor-community/admob": ["@capacitor-community/admob@7.2.0", "", { "dependencies": { "@capacitor/core": "^7.0.0", "@rdlabo/capacitor-docgen": "^0.4.1" } }, "sha512-ejRd0CkiHq15F0XvHXPhk9gKIlYy7lj0hxCP+XUMqXwEoX8HN0BFE7bp3QvXKI/4FtjKMD8KF++e6sYMoKpwvA=="],
 
-    "@capacitor/android": ["@capacitor/android@8.3.1", "", { "peerDependencies": { "@capacitor/core": "^8.3.0" } }, "sha512-hjskIG8YcBEh3X4yaTXvE9gcqpdcxunTgFruSKnuPxtMxAUzEK4Oq25x0Z1g3cz+MQPc+lRG09R7Ovc+ydKsNw=="],
+    "@capacitor/android": ["@capacitor/android@7.6.2", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor/android/-/android-7.6.2.tgz", { "peerDependencies": { "@capacitor/core": "^7.6.0" } }, "sha512-zRIn10uTPbOQaFVRqkTGKwrrDypmn3L3I/x4XZSVLiCYt3zs8MUCPoqrMudNvOD+s6nQ5m0cX4GW8JRpMxKOkQ=="],
 
-    "@capacitor/cli": ["@capacitor/cli@8.3.1", "", { "dependencies": { "@ionic/cli-framework-output": "^2.2.8", "@ionic/utils-subprocess": "^3.0.1", "@ionic/utils-terminal": "^2.3.5", "commander": "^12.1.0", "debug": "^4.4.0", "env-paths": "^2.2.0", "fs-extra": "^11.2.0", "kleur": "^4.1.5", "native-run": "^2.0.3", "open": "^8.4.0", "plist": "^3.1.0", "prompts": "^2.4.2", "rimraf": "^6.0.1", "semver": "^7.6.3", "tar": "^7.5.3", "tslib": "^2.8.1", "xml2js": "^0.6.2" }, "bin": { "cap": "bin/capacitor", "capacitor": "bin/capacitor" } }, "sha512-1sPGW4THTDfR6YjXwZ0jM7oAfAtciPOHN00qs/3sNAQx1kKrrEYSfDPwCm1/xlAgi0OeL69SiRfw314Ans+1sw=="],
+    "@capacitor/cli": ["@capacitor/cli@7.6.2", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor/cli/-/cli-7.6.2.tgz", { "dependencies": { "@ionic/cli-framework-output": "^2.2.8", "@ionic/utils-subprocess": "^3.0.1", "@ionic/utils-terminal": "^2.3.5", "commander": "^12.1.0", "debug": "^4.4.0", "env-paths": "^2.2.0", "fs-extra": "^11.2.0", "kleur": "^4.1.5", "native-run": "^2.0.3", "open": "^8.4.0", "plist": "^3.1.0", "prompts": "^2.4.2", "rimraf": "^6.0.1", "semver": "^7.6.3", "tar": "^7.5.3", "tslib": "^2.8.1", "xml2js": "^0.6.2" }, "bin": { "cap": "bin/capacitor", "capacitor": "bin/capacitor" } }, "sha512-uPm+GDVhdWrM/DBWZ/L6c8uBVaEcge4MAXhqrIJWSkwad/9vNoVfUjtHaVgXxPE1g399PhlGm4kU8U7Qdfmwow=="],
 
-    "@capacitor/core": ["@capacitor/core@8.3.1", "", { "dependencies": { "tslib": "^2.1.0" } }, "sha512-UF8ItlHguU1Z6GXfPTeT2gakf+ctNI8pAS1kwSBQlsJMlfD4OPoto/SmKnOxKCQvnF4WRcdWeg6C0zREUNaAQg=="],
+    "@capacitor/core": ["@capacitor/core@7.6.2", "", { "dependencies": { "tslib": "^2.1.0" } }, "sha512-8HRKEUlYpCOeRec8bCHZwEA4o/E2q5dhHSd0v/Cr6+ume08fZY/gniF+ZCKF+6DO0T/nRaBeNRQn6Up+45J1mg=="],
 
-    "@capacitor/ios": ["@capacitor/ios@8.3.1", "", { "peerDependencies": { "@capacitor/core": "^8.3.0" } }, "sha512-BEhLyYYHWJLib4mpaPMaaylbC8meqgxbNYwQJH2svsSLW7yo/hFie+Zoo66a44XnqcMd2tvmAuzimWunXZi/xA=="],
+    "@capacitor/ios": ["@capacitor/ios@7.6.2", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor/ios/-/ios-7.6.2.tgz", { "peerDependencies": { "@capacitor/core": "^7.6.0" } }, "sha512-TZOXn7ZSEMsetrIEb8EHT4X9Nwsed1itqMwe+z5QOCDvm9XZ7i2YsjnrinUC1ZOIgva9IE2l+azus7qOpQ0aCg=="],
 
     "@emnapi/runtime": ["@emnapi/runtime@1.10.0", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-ewvYlk86xUoGI0zQRNq/mC+16R1QeDlKQy21Ki3oSYXNgLb45GV1P6A0M+/s6nyCuNDqe5VpaY84BzXGwVbwFA=="],
 
@@ -1390,8 +1390,6 @@
     "yocto-queue": ["yocto-queue@0.1.0", "", {}, "sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q=="],
 
     "zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
-
-    "@capacitor-community/admob/@capacitor/core": ["@capacitor/core@7.6.2", "", { "dependencies": { "tslib": "^2.1.0" } }, "sha512-8HRKEUlYpCOeRec8bCHZwEA4o/E2q5dhHSd0v/Cr6+ume08fZY/gniF+ZCKF+6DO0T/nRaBeNRQn6Up+45J1mg=="],
 
     "@eslint-community/eslint-utils/eslint-visitor-keys": ["eslint-visitor-keys@3.4.3", "", {}, "sha512-wpc+LXeiyiisxPlEkUzU6svyS1frIO3Mgxj1fdy7Pm8Ygzguax2N3Fa/D/ag1WqbOprdI+uY6wMUl8/a2G+iag=="],
 
