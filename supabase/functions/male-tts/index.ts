@@ -1,6 +1,6 @@
-// Edge function: returns MP3 audio for a given text using premium male TTS.
-// Primary: Lovable AI Gateway/OpenAI TTS with a human British male delivery.
-// Falls back to VoiceRSS, then Google Translate if premium providers fail.
+// Edge function: returns MP3 audio of a HUMAN BRITISH MALE voice.
+// Primary: ElevenLabs "George" (warm, dry British male, sarcastic-ready).
+// Fallbacks: Google Translate TTS (en-GB) — single voice but reliably human.
 // Audio is cached in Supabase Storage (tts-cache bucket) keyed by direction + text hash.
 
 const corsHeaders = {
@@ -11,16 +11,15 @@ const corsHeaders = {
 };
 
 const MAX_CHUNK = 190;
-const VOICERSS_MAX = 300;
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") ?? "";
+const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY") ?? "";
 const BUCKET = "tts-cache";
 
-const LOVABLE_TTS_URL = "https://ai.gateway.lovable.dev/v1/audio/speech";
-const LOVABLE_TTS_MODEL = "gpt-4o-mini-tts";
-const LOVABLE_TTS_VOICE = "onyx";
+// George — warm, dry British male (sarcastic-ready)
+const ELEVEN_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb";
+const ELEVEN_MODEL = "eleven_multilingual_v2";
 
 async function sha256Hex(text: string): Promise<string> {
   const data = new TextEncoder().encode(text);
@@ -59,109 +58,47 @@ async function cachePut(path: string, audio: Uint8Array): Promise<void> {
   }
 }
 
-async function fetchLovableTts(text: string): Promise<Uint8Array | null> {
-  if (!LOVABLE_API_KEY) {
-    console.warn("[male-tts] LOVABLE_API_KEY not set");
+async function fetchElevenLabs(text: string): Promise<Uint8Array | null> {
+  if (!ELEVENLABS_API_KEY) {
+    console.warn("[male-tts] ELEVENLABS_API_KEY not set");
     return null;
   }
 
   try {
-    const res = await fetch(LOVABLE_TTS_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-        Accept: "audio/mpeg",
-      },
-      body: JSON.stringify({
-        model: LOVABLE_TTS_MODEL,
-        voice: LOVABLE_TTS_VOICE,
-        input: text,
-        response_format: "mp3",
-        speed: 0.95,
-        instructions:
-          "Speak in a human-sounding British male voice with dry, witty sarcasm. Calm, amused, and conversational, like a clever partner making a knowing remark. Natural inflection, not robotic. Keep the cadence slightly deliberate and expressive.",
-      }),
-    });
+    const res = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN_VOICE_ID}?output_format=mp3_44100_128`,
+      {
+        method: "POST",
+        headers: {
+          "xi-api-key": ELEVENLABS_API_KEY,
+          "Content-Type": "application/json",
+          Accept: "audio/mpeg",
+        },
+        body: JSON.stringify({
+          text,
+          model_id: ELEVEN_MODEL,
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.85,
+            style: 0.5,
+            use_speaker_boost: true,
+            speed: 0.95,
+          },
+        }),
+      }
+    );
 
     if (!res.ok) {
       const errText = await res.text();
-      console.warn(`[male-tts] Lovable TTS ${res.status}: ${errText}`);
+      console.warn(`[male-tts] ElevenLabs ${res.status}: ${errText}`);
       return null;
     }
 
     return new Uint8Array(await res.arrayBuffer());
   } catch (err) {
-    console.warn("[male-tts] Lovable TTS exception:", err);
+    console.warn("[male-tts] ElevenLabs exception:", err);
     return null;
   }
-}
-
-function chunkForVoiceRss(text: string): string[] {
-  const clean = text.replace(/\s+/g, " ").trim();
-  if (!clean) return [];
-  if (clean.length <= VOICERSS_MAX) return [clean];
-
-  const parts: string[] = [];
-  const sentences = clean.match(/[^.!?]+[.!?]?/g) ?? [clean];
-  let current = "";
-
-  for (const sentence of sentences) {
-    const trimmed = sentence.trim();
-    if (!trimmed) continue;
-
-    if ((current + " " + trimmed).trim().length <= VOICERSS_MAX) {
-      current = (current ? current + " " : "") + trimmed;
-    } else {
-      if (current) parts.push(current);
-      current = trimmed.length <= VOICERSS_MAX ? trimmed : trimmed.slice(0, VOICERSS_MAX);
-    }
-  }
-
-  if (current) parts.push(current);
-  return parts;
-}
-
-async function fetchVoiceRssChunk(text: string): Promise<Uint8Array | null> {
-  try {
-    const url =
-      "https://api.voicerss.org/?key=demo&hl=en-gb&v=John&c=MP3&f=44khz_16bit_stereo&r=-2&src=" +
-      encodeURIComponent(text);
-    const res = await fetch(url, {
-      headers: { Accept: "audio/mpeg, */*" },
-    });
-
-    if (!res.ok) {
-      console.warn(`[male-tts] VoiceRSS ${res.status}`);
-      return null;
-    }
-
-    const buf = new Uint8Array(await res.arrayBuffer());
-    if (buf.length < 500) {
-      const txt = new TextDecoder().decode(buf);
-      console.warn(`[male-tts] VoiceRSS suspicious payload: ${txt}`);
-      return null;
-    }
-
-    return buf;
-  } catch (err) {
-    console.warn("[male-tts] VoiceRSS exception:", err);
-    return null;
-  }
-}
-
-async function fetchVoiceRss(text: string): Promise<Uint8Array | null> {
-  const chunks = chunkForVoiceRss(text);
-  if (!chunks.length) return null;
-
-  const buffers: Uint8Array[] = [];
-  for (const chunk of chunks) {
-    const buf = await fetchVoiceRssChunk(chunk);
-    if (!buf) return null;
-    buffers.push(buf);
-  }
-
-  return concat(buffers);
 }
 
 function chunkText(text: string): string[] {
@@ -264,41 +201,34 @@ Deno.serve(async (req) => {
 
     console.log(`[male-tts] cache MISS ${hash.slice(0, 8)} — generating`);
 
-    const providers: Array<{ name: string; fn: () => Promise<Uint8Array | null> }> = [
-      { name: "lovable", fn: () => fetchLovableTts(text) },
-      { name: "voicerss", fn: () => fetchVoiceRss(text) },
-    ];
-
-    for (const provider of providers) {
-      const audio = await provider.fn();
-      if (audio && audio.length > 0) {
-        console.log(`[male-tts] ${provider.name} success: ${audio.length} bytes`);
-        try {
-          await cachePut(path, audio);
-          return new Response(JSON.stringify({ url, cached: false }), {
-            status: 200,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json",
-              "X-TTS-Provider": provider.name,
-            },
-          });
-        } catch (cacheError) {
-          console.warn(`[male-tts] ${provider.name} cache failed; streaming direct`, cacheError);
-          return new Response(audio, {
-            status: 200,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "audio/mpeg",
-              "Cache-Control": "no-store",
-              "X-TTS-Provider": `${provider.name}-direct`,
-            },
-          });
-        }
+    // Primary: ElevenLabs George (premium British male)
+    const elevenAudio = await fetchElevenLabs(text);
+    if (elevenAudio && elevenAudio.length > 0) {
+      console.log(`[male-tts] elevenlabs success: ${elevenAudio.length} bytes`);
+      try {
+        await cachePut(path, elevenAudio);
+        return new Response(JSON.stringify({ url, cached: false }), {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "X-TTS-Provider": "elevenlabs",
+          },
+        });
+      } catch {
+        return new Response(elevenAudio, {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "audio/mpeg",
+            "Cache-Control": "no-store",
+            "X-TTS-Provider": "elevenlabs-direct",
+          },
+        });
       }
     }
 
-    console.warn("[male-tts] All premium providers failed; using Google fallback");
+    console.warn("[male-tts] ElevenLabs failed; using Google fallback");
     const chunks = chunkText(text);
     if (!chunks.length) {
       return new Response(JSON.stringify({ error: "Empty text" }), {
