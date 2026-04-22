@@ -1,5 +1,5 @@
 import type { Direction } from "@/data/translations";
-import { preloadBrowserVoices, speakWithBrowserTts, type SpeechPlaybackHandle } from "@/lib/browserSarcasticTts";
+import { preloadBrowserVoices, type SpeechPlaybackHandle } from "@/lib/browserSarcasticTts";
 import { prepareSpeechText } from "@/lib/speechTextUtils";
 import { supabase } from "@/integrations/supabase/client";
 
