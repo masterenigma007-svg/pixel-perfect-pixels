@@ -18,6 +18,7 @@ let activeAudio: HTMLAudioElement | null = null;
 let playbackSessionId = 0;
 
 function speakWithEdgeFunction(
+  functionName: string,
   text: string,
   direction: Direction,
   onStart?: () => void,
@@ -29,7 +30,7 @@ function speakWithEdgeFunction(
 
   (async () => {
     try {
-      const { data, error } = await supabase.functions.invoke("female-tts", {
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: { text },
       });
       if (stopped) return;
@@ -91,27 +92,16 @@ export function speakSarcastic(options: SpeakOptions): void {
     callback?.();
   };
 
-  // Female voice: use the high-quality ElevenLabs edge function for a
-  // genuinely human British female voice. Falls back to browser TTS internally.
-  // Male voice: continue with the device's built-in TTS engine.
-  if (direction === "menToWomen") {
-    activePlayback = speakWithEdgeFunction(
-      processedText,
-      direction,
-      onStart,
-      () => finalizePlayback(onEnd),
-      (error) => finalizePlayback(() => onError?.(error)),
-    );
-    return;
-  }
+  const edgeFunctionName = direction === "menToWomen" ? "female-tts" : "male-tts";
 
-  activePlayback = speakWithBrowserTts({
-    text: processedText,
+  activePlayback = speakWithEdgeFunction(
+    edgeFunctionName,
+    processedText,
     direction,
     onStart,
-    onEnd: () => finalizePlayback(onEnd),
-    onError: (error) => finalizePlayback(() => onError?.(error)),
-  });
+    () => finalizePlayback(onEnd),
+    (error) => finalizePlayback(() => onError?.(error)),
+  );
 }
 
 export function stopSpeaking(): void {
@@ -140,5 +130,5 @@ export function preloadVoices(): void {
 }
 
 export function preloadOfflineFemaleVoice(): void {
-  // No-op: female voice uses the cloud edge function with browser TTS fallback.
+  // No-op: voices use cloud TTS functions with browser TTS fallback.
 }
