@@ -63,7 +63,21 @@ jobs:
 
       - name: Decode keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+          printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+
+      - name: Validate signing secrets
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_PASSWORD" || { echo "Missing KEYSTORE_PASSWORD secret"; exit 1; }
+          test -n "$KEY_ALIAS" || { echo "Missing KEY_ALIAS secret"; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo "Missing KEY_PASSWORD secret"; exit 1; }
+          keytool -list -keystore android/app/upload-keystore.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null || {
+            echo "Keystore validation failed. Check KEYSTORE_BASE64, KEYSTORE_PASSWORD, and KEY_ALIAS.";
+            exit 1;
+          }
 
       - name: Configure signing
         run: |
