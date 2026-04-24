@@ -63,7 +63,9 @@ jobs:
 
       - name: Decode keystore
         run: |
-          printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '[:space:]' | base64 --decode > android/app/upload-keystore.jks
+          ls -la android/app/upload-keystore.jks
+          file android/app/upload-keystore.jks
 
       - name: Validate signing secrets
         env:
