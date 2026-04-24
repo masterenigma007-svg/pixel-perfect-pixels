@@ -66,11 +66,23 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
           python3 - <<'PY'
-          import base64, os, re
+          import base64, binascii, os, re
+
           data = os.environ.get("KEYSTORE_BASE64", "")
-          cleaned = re.sub(r"[^A-Za-z0-9+/=]", "", data)
+          cleaned = re.sub(r"\s+", "", data)
+
+          if not cleaned:
+              raise SystemExit("KEYSTORE_BASE64 secret is empty")
+
+          padded = cleaned + ("=" * (-len(cleaned) % 4))
+
+          try:
+              decoded = base64.b64decode(padded, validate=False)
+          except binascii.Error as exc:
+              raise SystemExit(f"Invalid KEYSTORE_BASE64 secret: {exc}")
+
           with open("android/app/upload-keystore.jks", "wb") as f:
-              f.write(base64.b64decode(cleaned))
+              f.write(decoded)
           PY
           ls -la android/app/upload-keystore.jks
           file android/app/upload-keystore.jks
