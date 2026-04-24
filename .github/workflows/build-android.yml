@@ -91,13 +91,32 @@ jobs:
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           test -n "$KEYSTORE_PASSWORD" || { echo "Missing KEYSTORE_PASSWORD secret"; exit 1; }
-          test -n "$KEY_PASSWORD" || { echo "Missing KEY_PASSWORD secret"; exit 1; }
-          keytool -list -keystore android/app/upload-keystore.jks -storepass "$KEYSTORE_PASSWORD" -alias upload >/dev/null || {
-            echo "Keystore validation failed. Check KEYSTORE_BASE64, KEYSTORE_PASSWORD, and that the alias is 'upload'.";
+
+          if [ -z "$KEY_PASSWORD" ]; then
+            KEY_PASSWORD="$KEYSTORE_PASSWORD"
+          fi
+
+          if [ -z "$KEY_ALIAS" ]; then
+            KEY_ALIAS="$(keytool -list -v -keystore android/app/upload-keystore.jks -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | awk -F': ' '/Alias name:/ { print $2; exit }')"
+          fi
+
+          test -n "$KEY_ALIAS" || {
+            echo "Could not read a keystore alias. Check KEYSTORE_PASSWORD or add a KEY_ALIAS secret.";
             exit 1;
           }
+
+          keytool -list -keystore android/app/upload-keystore.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null || {
+            echo "Keystore validation failed. Check KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_PASSWORD, and KEY_ALIAS.";
+            exit 1;
+          }
+
+          {
+            echo "KEY_ALIAS=$KEY_ALIAS"
+            echo "KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
 
       - name: Configure signing
         run: |
@@ -108,8 +127,8 @@ jobs:
                   release {
                       storeFile file('upload-keystore.jks')
                       storePassword System.getenv("KEYSTORE_PASSWORD")
-                      keyAlias 'upload'
-                      keyPassword System.getenv("KEY_PASSWORD")
+                      keyAlias System.getenv("KEY_ALIAS") ?: 'upload'
+                      keyPassword System.getenv("KEY_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD")
                   }
               }
               buildTypes {
