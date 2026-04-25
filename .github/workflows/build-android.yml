@@ -69,7 +69,8 @@ jobs:
           import base64, binascii, os, re
 
           data = os.environ.get("KEYSTORE_BASE64", "")
-          cleaned = re.sub(r"\s+", "", data)
+          cleaned = re.sub(r"-----BEGIN [^-]+-----|-----END [^-]+-----", "", data)
+          cleaned = re.sub(r"[^A-Za-z0-9+/=]", "", cleaned)
 
           if not cleaned:
               raise SystemExit("KEYSTORE_BASE64 secret is empty")
