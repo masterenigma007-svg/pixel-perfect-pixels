@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.relationshipsaver',
+  appId: 'com.relationshipsaver.translator',
   appName: 'Relationship Saver',
   webDir: 'dist',
   ios: {
