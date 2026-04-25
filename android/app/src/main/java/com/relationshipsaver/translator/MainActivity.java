@@ -1,4 +1,4 @@
-package app.lovable.relationshipsaver;
+package com.relationshipsaver.translator;
 
 import com.getcapacitor.BridgeActivity;
 
