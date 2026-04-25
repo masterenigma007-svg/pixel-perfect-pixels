@@ -95,13 +95,22 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           test -n "$KEYSTORE_PASSWORD" || { echo "Missing KEYSTORE_PASSWORD secret"; exit 1; }
+          KEYSTORE_PASSWORD="$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '\r')"
+          KEY_PASSWORD="$(printf '%s' "$KEY_PASSWORD" | tr -d '\r')"
+          KEY_ALIAS="$(printf '%s' "$KEY_ALIAS" | tr -d '\r' | xargs)"
 
           if [ -z "$KEY_PASSWORD" ]; then
             KEY_PASSWORD="$KEYSTORE_PASSWORD"
           fi
 
-          if [ -z "$KEY_ALIAS" ]; then
-            KEY_ALIAS="$(keytool -list -v -keystore android/app/upload-keystore.jks -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | awk -F': ' '/Alias name:/ { print $2; exit }')"
+          keytool -list -keystore android/app/upload-keystore.jks -storepass "$KEYSTORE_PASSWORD" >/dev/null || {
+            echo "Keystore password failed or KEYSTORE_BASE64 does not match the local upload-keystore.jks file.";
+            exit 1;
+          }
+
+          DETECTED_ALIAS="$(keytool -list -v -keystore android/app/upload-keystore.jks -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | awk -F': ' '/Alias name:/ { print $2; exit }')"
+          if [ -n "$DETECTED_ALIAS" ]; then
+            KEY_ALIAS="$DETECTED_ALIAS"
           fi
 
           test -n "$KEY_ALIAS" || {
