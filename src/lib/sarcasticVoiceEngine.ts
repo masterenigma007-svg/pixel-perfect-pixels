@@ -125,7 +125,11 @@ export function stopSpeaking(): void {
 }
 
 export function isSpeechActive(): boolean {
-  return Boolean(activePlayback) || Boolean(activeAudio) || window.speechSynthesis.speaking;
+  const synthSpeaking =
+    typeof window !== "undefined" && window.speechSynthesis
+      ? window.speechSynthesis.speaking
+      : false;
+  return Boolean(activePlayback) || Boolean(activeAudio) || synthSpeaking;
 }
 
 export function preloadVoices(): void {
