@@ -263,7 +263,15 @@ function scoreVoice(voice: SpeechSynthesisVoice, direction: Direction, targetNam
 }
 
 function selectVoice(direction: Direction): SpeechSynthesisVoice | null {
-  const voices = window.speechSynthesis.getVoices();
+  if (typeof window === "undefined" || !("speechSynthesis" in window) || !window.speechSynthesis) {
+    return null;
+  }
+  let voices: SpeechSynthesisVoice[] = [];
+  try {
+    voices = window.speechSynthesis.getVoices();
+  } catch {
+    return null;
+  }
   const wantFemale = direction === "menToWomen";
   const targetNames = wantFemale ? FEMALE_NAMES : MALE_NAMES;
   // Use explicit opposite-gender markers only. Avoid generic tokens like "male"
