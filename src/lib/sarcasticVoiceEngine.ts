@@ -119,11 +119,17 @@ export function stopSpeaking(): void {
     activeAudio = null;
   }
 
-  window.speechSynthesis.cancel();
+  if (typeof window !== "undefined" && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
 }
 
 export function isSpeechActive(): boolean {
-  return Boolean(activePlayback) || Boolean(activeAudio) || window.speechSynthesis.speaking;
+  const synthSpeaking =
+    typeof window !== "undefined" && window.speechSynthesis
+      ? window.speechSynthesis.speaking
+      : false;
+  return Boolean(activePlayback) || Boolean(activeAudio) || synthSpeaking;
 }
 
 export function preloadVoices(): void {
