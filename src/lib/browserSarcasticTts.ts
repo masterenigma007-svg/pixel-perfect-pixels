@@ -402,5 +402,11 @@ export function speakWithBrowserTts(options: BrowserSpeakOptions): SpeechPlaybac
 }
 
 export function preloadBrowserVoices(): void {
-  window.speechSynthesis.getVoices();
+  if (typeof window === "undefined") return;
+  if (!("speechSynthesis" in window) || !window.speechSynthesis) return;
+  try {
+    window.speechSynthesis.getVoices();
+  } catch {
+    // ignore — some WebViews throw before user gesture
+  }
 }
