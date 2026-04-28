@@ -119,7 +119,9 @@ export function stopSpeaking(): void {
     activeAudio = null;
   }
 
-  window.speechSynthesis.cancel();
+  if (typeof window !== "undefined" && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
 }
 
 export function isSpeechActive(): boolean {
