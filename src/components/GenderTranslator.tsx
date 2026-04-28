@@ -52,9 +52,14 @@ export default function GenderTranslator() {
 
   useEffect(() => {
     preloadVoices();
+    if (typeof window === "undefined" || !("speechSynthesis" in window) || !window.speechSynthesis) {
+      return;
+    }
     window.speechSynthesis.onvoiceschanged = () => preloadVoices();
     return () => {
-      window.speechSynthesis.onvoiceschanged = null;
+      if (window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
     };
   }, []);
 
