@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Service role can insert into tts-cache" ON storage.objects;
