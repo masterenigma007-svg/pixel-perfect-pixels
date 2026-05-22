@@ -34,7 +34,9 @@ export function setTheme(theme: ThemePref) {
 
 export function onThemeChange(cb: (t: ThemePref) => void) {
   listeners.add(cb);
-  return () => listeners.delete(cb);
+  return () => {
+    listeners.delete(cb);
+  };
 }
 
 export function initTheme() {
