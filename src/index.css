@@ -43,6 +43,27 @@
     --sidebar-border: 240 4% 20%;
     --sidebar-ring: 350 80% 65%;
   }
+
+  /* Light theme overrides — applied when <html class="light"> */
+  html.light {
+    --background: 0 0% 98%;
+    --foreground: 240 10% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 12%;
+    --primary: 350 80% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 174 62% 42%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 240 5% 94%;
+    --muted-foreground: 240 5% 35%;
+    --accent: 174 62% 42%;
+    --accent-foreground: 0 0% 100%;
+    --border: 240 5% 85%;
+    --input: 240 5% 85%;
+    --ring: 350 80% 55%;
+  }
 }
 
 @layer base {
@@ -54,6 +75,10 @@
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, sans-serif;
   }
+
+  /* Safe-area helpers for notch / status-bar phones */
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 }
 
 /* Mirage animated gradient text */
