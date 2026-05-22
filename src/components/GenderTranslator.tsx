@@ -4,6 +4,8 @@ import { translate, suggestions } from "@/data/translations";
 import type { Direction, AgeGroup } from "@/data/translations";
 import { speakSarcastic, stopSpeaking, preloadVoices } from "@/lib/sarcasticVoiceEngine";
 import { maybeShowInterstitial } from "@/lib/monetization";
+import { startSpeech, stopSpeech } from "@/lib/nativeSpeech";
+
 import micIcon from "@/assets/mic-icon.png";
 import speakerIcon from "@/assets/speaker-icon.png";
 
@@ -46,7 +48,7 @@ export default function GenderTranslator() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [toast, setToast] = useState("");
   const [isTranslating, setIsTranslating] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  // (legacy ref removed — speech now goes through src/lib/nativeSpeech.ts)
   const doTranslateRef = useRef<((text: string, dir?: Direction, age?: AgeGroup) => void) | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -69,25 +71,9 @@ export default function GenderTranslator() {
     toastTimerRef.current = setTimeout(() => setToast(""), 2500);
   }, []);
 
-  useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const rec = new SpeechRecognition();
-      rec.continuous = false;
-      rec.interimResults = false;
-      rec.lang = "en-US";
-      rec.onresult = (e: SpeechRecognitionEvent) => {
-        const transcript = e.results[0][0].transcript;
-        setInput(transcript);
-        setIsRecording(false);
-        doTranslateRef.current?.(transcript);
-      };
-      rec.onerror = () => setIsRecording(false);
-      rec.onend = () => setIsRecording(false);
-      recognitionRef.current = rec;
-    }
-  }, []);
+  // Web SpeechRecognition is set up lazily inside startSpeech (nativeSpeech.ts).
+  // On native (Android/iOS) we use the Capacitor SpeechRecognition plugin which
+  // works inside the Android WebView where webkitSpeechRecognition does not.
 
   const doTranslate = useCallback(
     (text: string, dir?: Direction, age?: AgeGroup) => {
@@ -125,19 +111,24 @@ export default function GenderTranslator() {
 
   const handleTranslate = () => doTranslate(input);
 
-  const handleMic = () => {
-    const rec = recognitionRef.current;
-    if (!rec) {
-      showToast("Speech recognition not supported in this browser");
+  const handleMic = async () => {
+    if (isRecording) {
+      await stopSpeech();
+      setIsRecording(false);
       return;
     }
-    if (isRecording) {
-      rec.stop();
-      setIsRecording(false);
-    } else {
-      rec.start();
-      setIsRecording(true);
-    }
+    setIsRecording(true);
+    await startSpeech({
+      onResult: ({ transcript }) => {
+        setInput(transcript);
+        doTranslateRef.current?.(transcript);
+      },
+      onEnd: () => setIsRecording(false),
+      onError: (msg) => {
+        showToast(msg);
+        setIsRecording(false);
+      },
+    });
   };
 
   const handleSpeak = useCallback(() => {

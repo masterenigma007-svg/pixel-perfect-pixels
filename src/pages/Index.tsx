@@ -41,8 +41,9 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+    <div className="min-h-screen bg-background safe-bottom">
+      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border safe-top">
+
         <div className="max-w-lg mx-auto flex items-stretch relative">
           {tabs.map((t) => (
             <button
