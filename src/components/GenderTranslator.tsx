@@ -4,6 +4,8 @@ import { translate, suggestions } from "@/data/translations";
 import type { Direction, AgeGroup } from "@/data/translations";
 import { speakSarcastic, stopSpeaking, preloadVoices } from "@/lib/sarcasticVoiceEngine";
 import { maybeShowInterstitial } from "@/lib/monetization";
+import { startSpeech, stopSpeech } from "@/lib/nativeSpeech";
+
 import micIcon from "@/assets/mic-icon.png";
 import speakerIcon from "@/assets/speaker-icon.png";
 
