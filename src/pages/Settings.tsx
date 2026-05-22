@@ -7,13 +7,16 @@ import {
   purchaseRemoveAds,
   restorePurchases,
 } from "@/lib/monetization";
+import { getTheme, setTheme, onThemeChange, type ThemePref } from "@/lib/theme";
 
 export default function Settings() {
   const [adFree, setAdFree] = useState(isAdFree());
   const [busy, setBusy] = useState<"buy" | "restore" | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [theme, setThemeState] = useState<ThemePref>(getTheme());
 
   useEffect(() => onAdFreeChange(setAdFree), []);
+  useEffect(() => onThemeChange(setThemeState), []);
 
   const handleBuy = async () => {
     setBusy("buy");
@@ -31,9 +34,15 @@ export default function Settings() {
     setBusy(null);
   };
 
+  const themeOptions: { id: ThemePref; label: string; icon: string }[] = [
+    { id: "light", label: "Light", icon: "☀️" },
+    { id: "dark", label: "Dark", icon: "🌙" },
+    { id: "system", label: "System", icon: "📱" },
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+    <div className="min-h-screen bg-background safe-bottom">
+      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border safe-top">
         <div className="max-w-lg mx-auto flex items-center px-4 py-3">
           <Link
             to="/"
@@ -47,6 +56,40 @@ export default function Settings() {
       </div>
 
       <div className="max-w-lg mx-auto p-4 sm:p-6 space-y-6">
+        {/* Appearance */}
+        <motion.section
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl bg-card border border-border p-5 shadow-sm space-y-4"
+        >
+          <div>
+            <h2 className="text-lg font-bold">Appearance</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Choose how the app looks. "System" follows your phone's theme.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {themeOptions.map((opt) => {
+              const active = theme === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => setTheme(opt.id)}
+                  className={`py-3 rounded-xl border text-sm font-semibold transition-all active:scale-[0.97] ${
+                    active
+                      ? "bg-primary text-primary-foreground border-primary shadow"
+                      : "bg-muted text-foreground border-border hover:border-primary/50"
+                  }`}
+                >
+                  <div className="text-xl leading-none mb-1">{opt.icon}</div>
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </motion.section>
+
+        {/* Remove Ads */}
         <motion.section
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
