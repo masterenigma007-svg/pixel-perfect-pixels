@@ -111,19 +111,24 @@ export default function GenderTranslator() {
 
   const handleTranslate = () => doTranslate(input);
 
-  const handleMic = () => {
-    const rec = recognitionRef.current;
-    if (!rec) {
-      showToast("Speech recognition not supported in this browser");
+  const handleMic = async () => {
+    if (isRecording) {
+      await stopSpeech();
+      setIsRecording(false);
       return;
     }
-    if (isRecording) {
-      rec.stop();
-      setIsRecording(false);
-    } else {
-      rec.start();
-      setIsRecording(true);
-    }
+    setIsRecording(true);
+    await startSpeech({
+      onResult: ({ transcript }) => {
+        setInput(transcript);
+        doTranslateRef.current?.(transcript);
+      },
+      onEnd: () => setIsRecording(false),
+      onError: (msg) => {
+        showToast(msg);
+        setIsRecording(false);
+      },
+    });
   };
 
   const handleSpeak = useCallback(() => {
