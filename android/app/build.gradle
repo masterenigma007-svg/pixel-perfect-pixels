@@ -7,7 +7,7 @@ android {
         applicationId "com.relationshipsaver.translator"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
+        versionCode 3
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -43,6 +43,29 @@ dependencies {
 }
 
 apply from: 'capacitor.build.gradle'
+
+// Inspect the selected runtime version, including dependencies supplied by plugins.
+tasks.register('verifyBillingLibrary') {
+    doLast {
+        def billing = configurations.releaseRuntimeClasspath.resolvedConfiguration.resolvedArtifacts.findAll {
+            it.moduleVersion.id.group == 'com.android.billingclient' && it.name == 'billing'
+        }
+        if (billing.isEmpty()) {
+            throw new GradleException('Expected Play Billing dependency was not resolved')
+        }
+        billing.each {
+            def version = it.moduleVersion.id.version
+            if (version != '8.0.0') {
+                throw new GradleException("Unexpected Play Billing version: ${version}; review the native plugin patch before upgrading")
+            }
+            logger.lifecycle("Verified com.android.billingclient:billing:${version}")
+        }
+    }
+}
+
+tasks.matching { it.name == 'bundleRelease' }.configureEach {
+    dependsOn 'verifyBillingLibrary'
+}
 
 try {
     def servicesJSON = file('google-services.json')
