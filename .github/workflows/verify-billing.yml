@@ -1,0 +1,54 @@
+name: Verify Android billing migration
+
+on:
+  pull_request:
+  push:
+    branches: [fix/play-billing-8]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - run: npm ci --legacy-peer-deps
+      - run: npm test
+      - run: npm run build
+      - run: npx cap sync android
+      - name: Compile native code and inspect release dependencies
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:verifyBillingLibrary :app:assembleDebug :app:processReleaseMainManifest
+      - name: Verify merged billing manifest
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          path = Path('android/app/build/intermediates/merged_manifests/release/processReleaseMainManifest/AndroidManifest.xml')
+          # AGP may put the main manifest in merged_manifest instead.
+          if not path.exists():
+              path = Path('android/app/build/intermediates/merged_manifest/release/processReleaseMainManifest/AndroidManifest.xml')
+          root = ET.parse(path).getroot()
+          ns = '{http://schemas.android.com/apk/res/android}'
+          assert any(p.get(ns+'name') == 'com.android.vending.BILLING' for p in root.findall('uses-permission'))
+          metadata = {m.get(ns+'name'): m.get(ns+'value') for m in root.findall('application/meta-data')}
+          assert metadata.get('com.google.android.play.billingclient.version') == '8.0.0', metadata
+          print('Merged manifest declares Play Billing 8.0.0')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: billing-8-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
