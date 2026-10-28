@@ -47,14 +47,14 @@ apply from: 'capacitor.build.gradle'
 // Inspect the selected runtime version, including dependencies supplied by plugins.
 tasks.register('verifyBillingLibrary') {
     doLast {
-        def billing = configurations.releaseRuntimeClasspath.resolvedConfiguration.resolvedArtifacts.findAll {
-            it.moduleVersion.id.group == 'com.android.billingclient' && it.name == 'billing'
+        def billing = configurations.releaseRuntimeClasspath.incoming.resolutionResult.allComponents.findAll {
+            it.moduleVersion?.group == 'com.android.billingclient' && it.moduleVersion?.name == 'billing'
         }
         if (billing.isEmpty()) {
             throw new GradleException('Expected Play Billing dependency was not resolved')
         }
         billing.each {
-            def version = it.moduleVersion.id.version
+            def version = it.moduleVersion.version
             if (version != '8.0.0') {
                 throw new GradleException("Unexpected Play Billing version: ${version}; review the native plugin patch before upgrading")
             }
