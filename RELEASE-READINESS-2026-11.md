@@ -53,3 +53,25 @@ Official references:
 - https://developer.android.com/google/play/billing/deprecation-faq
 - https://developer.android.com/google/play/billing/integrate
 - https://developers.google.com/admob/android/privacy/play-data-disclosure
+
+## November 7 owner decision: compliance-only version 5, no new purchases
+
+The owner explicitly chose **to keep Remove Ads sales unavailable** and prioritize clearing Google's Play Billing warning.
+
+- Version 5 includes the hard-coded `REMOVE_ADS_SALES_ENABLED = false` gate. Both `getRemoveAdsOffer()` and `purchaseRemoveAds()` return an unavailable response before invoking a native purchase method, **even if a Play product is configured later**.
+- The Settings screen visibly says purchases are temporarily unavailable; the purchase button is disabled, with no $1.99 offer shown. Restore Purchases stays available for previously acquired entitlements.
+- Automated tests assert that neither product lookup nor the native purchase call is invoked while the gate is off.
+- Do **not** create or activate `remove_ads_199` for this compliance-only version. To sell it later, prepare a separately tested, reviewed release with server-side verification.
+- The upload keystore was removed **from this draft branch** and ignored in `android/app/.gitignore`. The signed build workflow uses pre-existing GitHub secrets to supply the key at build time.
+- **Important security limitation:** removing the keystore from the latest tree does not erase it from repository history. The upload key was public and should be assessed/reset through Google Play App integrity before a live rollout.
+
+### Owner approval / Console release sequence (not executed)
+
+1. Compare the version 5 candidate against the installed app and test the translator, voice input/output, Compatibility game, Truth/Dare, settings, and Restore Purchases on actual Android devices.
+2. In Play Console → Relationship Saver Translator → **Setup → App integrity**, compare the signed AAB's upload certificate with **Upload key certificate**. Do not compare to the separate Play app signing certificate.
+3. Address the potentially exposed upload key (reset and update GitHub signing secrets as instructed by Play if needed); rebuild and re-verify the bundle after any key change.
+4. Check Play Console's **App content → Data safety** against actual SDK collection/permissions, verify privacy disclosures, and complete any other required Console declarations.
+5. Obtain explicit owner authorization for a particular reviewed AAB **before upload**, review internal testing of the exact artifact, then obtain owner authorization for any Production / Alpha rollout.
+6. After Google processes releases, re-open Policy status for **Production** and **Closed testing – Alpha** and confirm the Billing warning is actually cleared. Do not treat a successful GitHub CI build as Play compliance approval.
+
+**This GitHub branch and its CI do not upload or publish to Google Play.**
