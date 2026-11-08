@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - fix/relationship-saver-one-time-billing-readiness
 
 jobs:
   build:
