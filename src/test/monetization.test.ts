@@ -4,36 +4,48 @@ vi.mock("@capacitor/core", () => ({
   Capacitor: { isNativePlatform: () => true, getPlatform: () => "android" },
 }));
 vi.mock("@squareetlabs/capacitor-subscriptions", () => ({
-  Subscriptions: { getProductDetails: vi.fn() },
+  Subscriptions: {
+    getProductDetails: vi.fn(),
+    purchaseProduct: vi.fn(),
+  },
 }));
 
 import { Subscriptions } from "@squareetlabs/capacitor-subscriptions";
-import { getRemoveAdsOffer } from "@/lib/monetization";
+import {
+  REMOVE_ADS_SALES_ENABLED,
+  REMOVE_ADS_UNAVAILABLE_MESSAGE,
+  getRemoveAdsOffer,
+  purchaseRemoveAds,
+  restorePurchases,
+} from "@/lib/monetization";
 
-describe("Remove Ads store availability", () => {
+describe("version 5 billing compliance release: no new sales", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("uses the localized Play price only when a real offer exists", async () => {
+  it("keeps the sales gate disabled", () => {
+    expect(REMOVE_ADS_SALES_ENABLED).toBe(false);
+  });
+
+  it("does not advertise a purchase even if Play later configures a product", async () => {
     vi.mocked(Subscriptions.getProductDetails).mockResolvedValue({
       responseCode: 0,
       data: { productIdentifier: "remove_ads_199", price: "$1.99" },
     } as any);
-    expect(await getRemoveAdsOffer()).toEqual({ status: "available", price: "$1.99" });
+
+    expect(await getRemoveAdsOffer()).toEqual({
+      status: "unavailable",
+      message: REMOVE_ADS_UNAVAILABLE_MESSAGE,
+    });
+    expect(Subscriptions.getProductDetails).not.toHaveBeenCalled();
   });
 
-  it("disables purchasing when no Play product is configured", async () => {
-    vi.mocked(Subscriptions.getProductDetails).mockResolvedValue({
-      responseCode: 4,
-      responseMessage: "Item unavailable",
-    } as any);
-    expect((await getRemoveAdsOffer()).status).toBe("unavailable");
+  it("never launches native billing while sales are disabled", async () => {
+    const result = await purchaseRemoveAds();
+    expect(result).toEqual({ ok: false, message: REMOVE_ADS_UNAVAILABLE_MESSAGE });
+    expect(Subscriptions.purchaseProduct).not.toHaveBeenCalled();
   });
 
-  it("distinguishes a connecting Billing client from a missing product", async () => {
-    vi.mocked(Subscriptions.getProductDetails).mockResolvedValue({
-      responseCode: 503,
-      responseMessage: "Still initialising",
-    } as any);
-    expect((await getRemoveAdsOffer()).status).toBe("connecting");
+  it("retains the restore entry point for pre-existing entitlements", () => {
+    expect(restorePurchases).toEqual(expect.any(Function));
   });
 });
