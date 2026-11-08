@@ -1,2 +1,6 @@
 /build/*
 !/build/.npmkeep
+# Release upload keys must be supplied by CI secrets, never committed.
+/upload-keystore.jks
+/*.keystore
+/*.jks
