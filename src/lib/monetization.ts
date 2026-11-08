@@ -16,6 +16,13 @@ import { Capacitor } from "@capacitor/core";
 
 export const REMOVE_ADS_PRODUCT_ID = "remove_ads_199";
 
+// Version 5 compliance-only release: preserve restore logic, but do NOT offer
+// or initiate any new purchase. A future monetization release must explicitly
+// change this gate after Play products and server verification are configured.
+export const REMOVE_ADS_SALES_ENABLED = false;
+export const REMOVE_ADS_UNAVAILABLE_MESSAGE =
+  "Remove Ads purchases are temporarily unavailable. Your other app features still work.";
+
 // Google's official TEST ad unit IDs (always show test ads, safe to ship for dev).
 const TEST_BANNER_ID = "ca-app-pub-3940256099942544/6300978111";
 const TEST_INTERSTITIAL_ID = "ca-app-pub-3940256099942544/1033173712";
@@ -218,6 +225,9 @@ export type RemoveAdsOffer =
  * purchase that Google Play has not configured. The planned price is $1.99,
  * but localized store pricing is authoritative. */
 export async function getRemoveAdsOffer(): Promise<RemoveAdsOffer> {
+  if (!REMOVE_ADS_SALES_ENABLED) {
+    return { status: "unavailable", message: REMOVE_ADS_UNAVAILABLE_MESSAGE };
+  }
   if (!Capacitor.isNativePlatform()) {
     return { status: "unavailable", message: "Purchases are only available in the mobile app." };
   }
@@ -237,6 +247,11 @@ export async function getRemoveAdsOffer(): Promise<RemoveAdsOffer> {
 }
 
 export async function purchaseRemoveAds(): Promise<PurchaseResult> {
+  // Defense in depth: block the native call as well as the UI, even if a Play
+  // product is later created without first preparing a tested paid release.
+  if (!REMOVE_ADS_SALES_ENABLED) {
+    return { ok: false, message: REMOVE_ADS_UNAVAILABLE_MESSAGE };
+  }
   if (!isNative) {
     return {
       ok: false,
