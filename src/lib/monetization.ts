@@ -45,6 +45,7 @@ const LS_AD_FREE = "monetization.adFree";
 
 let initialized = false;
 let purchaseListenerInstalled = false;
+let purchaseRefreshInFlight = false;
 let isNative = false;
 let adFree = false;
 let bannerVisible = false;
@@ -99,6 +100,14 @@ export async function initMonetization(): Promise<void> {
     // Web preview: nothing else to do — all ad/IAP calls will no-op below.
     return;
   }
+
+  // A pending Google Play payment can complete while the app is in the background.
+  // Recheck completed entitlements when the WebView returns to the foreground.
+  const refreshOnResume = () => {
+    if (document.visibilityState === "visible") void refreshPurchaseStatus();
+  };
+  document.addEventListener("visibilitychange", refreshOnResume);
+  window.addEventListener("focus", refreshOnResume);
 
   // Native init — guarded so any failure can't crash the app.
   try {
@@ -299,7 +308,8 @@ async function ensurePurchaseListener(): Promise<void> {
 }
 
 async function refreshPurchaseStatus(): Promise<void> {
-  if (!isNative) return;
+  if (!isNative || purchaseRefreshInFlight) return;
+  purchaseRefreshInFlight = true;
   try {
     await ensurePurchaseListener();
     const { Subscriptions } = await import("@squareetlabs/capacitor-subscriptions");
@@ -315,5 +325,7 @@ async function refreshPurchaseStatus(): Promise<void> {
     }
   } catch (e) {
     console.warn("[monetization] entitlement refresh failed", e);
+  } finally {
+    purchaseRefreshInFlight = false;
   }
 }
