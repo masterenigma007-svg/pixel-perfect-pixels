@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - fix/relationship-saver-one-time-billing-readiness
 
 jobs:
   build:
@@ -41,25 +42,14 @@ jobs:
       - name: Clean npm cache
         run: npm cache clean --force
 
-      - name: Install dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci --legacy-peer-deps || {
-              echo "npm ci failed because package-lock.json is out of sync; falling back to npm install"
-              npm install --legacy-peer-deps
-            }
-          else
-            echo "No package-lock.json found, falling back to npm install"
-            npm install --legacy-peer-deps
-          fi
+      - name: Install pinned dependencies and apply Billing 8 patch
+        run: npm ci --legacy-peer-deps
 
       - name: Build web assets
         run: npm run build
 
-      - name: Add Android platform
-        run: |
-          npx cap add android || echo "android platform already exists"
-          npx cap sync android
+      - name: Synchronize existing Android project
+        run: npx cap sync android
 
       - name: Decode keystore
         env:
@@ -157,6 +147,27 @@ jobs:
           cd android
           chmod +x ./gradlew
           ./gradlew bundleRelease
+
+      - name: Inspect signed bundle (no Play upload)
+        run: |
+          set -euo pipefail
+          BUNDLE=android/app/build/outputs/bundle/release/app-release.aab
+          test -s "$BUNDLE"
+          jarsigner -verify "$BUNDLE"
+          unzip -p "$BUNDLE" base/root/billing.properties | grep -qx 'version=8.0.0'
+          python3 - <<'PY'
+          from zipfile import ZipFile
+          bundle = 'android/app/build/outputs/bundle/release/app-release.aab'
+          with ZipFile(bundle) as z:
+              manifest = z.read('base/manifest/AndroidManifest.xml')
+              assert b'com.relationshipsaver.translator' in manifest, 'Incorrect package'
+              assert b'com.android.vending.BILLING' in manifest, 'Missing billing permission'
+              assert b'com.google.android.play.billingclient.version' in manifest, 'Missing Billing version metadata'
+              assert b'8.0.0' in manifest, 'Incorrect Billing version metadata'
+          print('Bundle package, billing permission and Billing 8 metadata verified')
+          PY
+          sha256sum "$BUNDLE"
+          keytool -printcert -jarfile "$BUNDLE" | grep -E 'SHA1:|SHA256:'
 
       - name: Upload AAB as artifact
         uses: actions/upload-artifact@v4

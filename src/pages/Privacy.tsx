@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect } from "react";
 
-const EFFECTIVE_DATE = "April 16, 2026";
+const EFFECTIVE_DATE = "November 7, 2026";
 const CONTACT_EMAIL = "masterenigma007@gmail.com";
 
 export default function Privacy() {
@@ -11,7 +11,7 @@ export default function Privacy() {
     if (desc) {
       desc.setAttribute(
         "content",
-        "Privacy policy for Relationship Saver: we collect no personal data. Everything stays on your device."
+        "Privacy policy for Relationship Saver: learn how local app features, ads, purchases, and speech services handle data."
       );
     }
   }, []);
@@ -39,22 +39,27 @@ export default function Privacy() {
           <section>
             <h2 className="text-xl font-semibold mb-2">The short version</h2>
             <p className="text-muted-foreground">
-              Relationship Saver collects <strong className="text-foreground">no personal information</strong>,
-              uses <strong className="text-foreground">no analytics</strong>, sends
-              <strong className="text-foreground"> no data to any server</strong>, and shows
-              <strong className="text-foreground"> no ads</strong>. Everything you do in the app stays on your device.
+              Translation and game progress are primarily kept on your device.
+              The mobile app includes the Google Mobile Ads SDK, an optional Google Play
+              purchase to remove ads, and operating-system speech services. These third
+              parties may process certain technical data as described below.
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold mb-2">What we do not collect</h2>
-            <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-              <li>No name, email, phone number, or account information</li>
-              <li>No location data</li>
-              <li>No advertising identifiers (IDFA / AAID)</li>
-              <li>No analytics, crash reports, or telemetry</li>
-              <li>No contacts, calendar, photos, or files</li>
-            </ul>
+            <h2 className="text-xl font-semibold mb-2">Data and third-party services</h2>
+            <p className="text-muted-foreground mb-2">
+              The app does not ask you to register an account. Google Mobile Ads may process
+              IP addresses, ad or device identifiers, interactions, and diagnostics for ads,
+              measurement, and fraud prevention, including when test ads are enabled.
+              Google Play handles payments and provides purchase status to this app.
+              We do not receive your full payment-card details.
+            </p>
+            <p className="text-muted-foreground">
+              Microphone access is optional. Speech recognition and voice synthesis may
+              be provided by your device's operating system or its chosen speech provider.
+              Review your device and Google privacy settings to control those services.
+            </p>
           </section>
 
           <section>
@@ -69,26 +74,28 @@ export default function Privacy() {
             </ul>
             <p className="text-muted-foreground mt-3">
               You can clear all of this at any time by deleting the app or clearing site data in your browser.
-              Nothing is ever transmitted off your device.
+              This describes app feature storage; third-party services may separately process data as described above.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold mb-2">Microphone &amp; speech</h2>
             <p className="text-muted-foreground">
-              If you tap the microphone icon, the app uses your device's built-in speech-recognition engine
-              (provided by your operating system or browser) to convert your voice into text locally. We never
-              record, store, or transmit your audio. The translated reply is spoken back using your device's
-              built-in text-to-speech voices — also entirely on-device.
+              If you tap the microphone icon, the app uses a speech-recognition service
+              supplied by your device or browser. Speech processing may be on-device or
+              cloud-based depending on the provider and your settings. The app does not
+              intentionally maintain an audio-recordings library. Spoken replies use your
+              device's speech-synthesis service.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold mb-2">Third parties</h2>
             <p className="text-muted-foreground">
-              The app does not integrate with any third-party advertising, analytics, tracking, or social
-              networking SDKs. The only network requests the app makes are to load the app itself and its
-              fonts from Google Fonts, which may receive your IP address as part of any standard web request.
+              The app includes Google Mobile Ads and Google Play Billing on Android. Google
+              Fonts may receive normal request information such as your IP address when fonts
+              are loaded. For details, review Google's privacy policies and the permissions
+              shown on your device.
             </p>
           </section>
 

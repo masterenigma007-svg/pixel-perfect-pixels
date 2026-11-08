@@ -16,6 +16,13 @@ import { Capacitor } from "@capacitor/core";
 
 export const REMOVE_ADS_PRODUCT_ID = "remove_ads_199";
 
+// Version 5 compliance-only release: preserve restore logic, but do NOT offer
+// or initiate any new purchase. A future monetization release must explicitly
+// change this gate after Play products and server verification are configured.
+export const REMOVE_ADS_SALES_ENABLED = false;
+export const REMOVE_ADS_UNAVAILABLE_MESSAGE =
+  "Remove Ads purchases are temporarily unavailable. Your other app features still work.";
+
 // Google's official TEST ad unit IDs (always show test ads, safe to ship for dev).
 const TEST_BANNER_ID = "ca-app-pub-3940256099942544/6300978111";
 const TEST_INTERSTITIAL_ID = "ca-app-pub-3940256099942544/1033173712";
@@ -44,6 +51,8 @@ const LS_AD_FREE = "monetization.adFree";
 // ============================================================================
 
 let initialized = false;
+let purchaseListenerInstalled = false;
+let purchaseRefreshInFlight = false;
 let isNative = false;
 let adFree = false;
 let bannerVisible = false;
@@ -98,6 +107,14 @@ export async function initMonetization(): Promise<void> {
     // Web preview: nothing else to do — all ad/IAP calls will no-op below.
     return;
   }
+
+  // A pending Google Play payment can complete while the app is in the background.
+  // Recheck completed entitlements when the WebView returns to the foreground.
+  const refreshOnResume = () => {
+    if (document.visibilityState === "visible") void refreshPurchaseStatus();
+  };
+  document.addEventListener("visibilitychange", refreshOnResume);
+  window.addEventListener("focus", refreshOnResume);
 
   // Native init — guarded so any failure can't crash the app.
   try {
@@ -200,7 +217,41 @@ export interface PurchaseResult {
   message: string;
 }
 
+export type RemoveAdsOffer =
+  | { status: "available"; price: string }
+  | { status: "connecting" | "unavailable"; message: string };
+
+/** Read price and availability directly from the store; never advertise a
+ * purchase that Google Play has not configured. The planned price is $1.99,
+ * but localized store pricing is authoritative. */
+export async function getRemoveAdsOffer(): Promise<RemoveAdsOffer> {
+  if (!REMOVE_ADS_SALES_ENABLED) {
+    return { status: "unavailable", message: REMOVE_ADS_UNAVAILABLE_MESSAGE };
+  }
+  if (!Capacitor.isNativePlatform()) {
+    return { status: "unavailable", message: "Purchases are only available in the mobile app." };
+  }
+  try {
+    const { Subscriptions } = await import("@squareetlabs/capacitor-subscriptions");
+    const details = await Subscriptions.getProductDetails({ productIdentifier: REMOVE_ADS_PRODUCT_ID });
+    if (details.responseCode === 0 && details.data?.price) {
+      return { status: "available", price: details.data.price };
+    }
+    if (Number(details.responseCode) === 503) {
+      return { status: "connecting", message: "Connecting to Google Play…" };
+    }
+    return { status: "unavailable", message: "Remove Ads is not yet available in Google Play." };
+  } catch {
+    return { status: "unavailable", message: "Could not retrieve this product from the store." };
+  }
+}
+
 export async function purchaseRemoveAds(): Promise<PurchaseResult> {
+  // Defense in depth: block the native call as well as the UI, even if a Play
+  // product is later created without first preparing a tested paid release.
+  if (!REMOVE_ADS_SALES_ENABLED) {
+    return { ok: false, message: REMOVE_ADS_UNAVAILABLE_MESSAGE };
+  }
   if (!isNative) {
     return {
       ok: false,
@@ -210,6 +261,11 @@ export async function purchaseRemoveAds(): Promise<PurchaseResult> {
   }
   try {
     const { Subscriptions } = await import("@squareetlabs/capacitor-subscriptions");
+    // Never launch a billing flow until the store returns a real offer.
+    const offer = await getRemoveAdsOffer();
+    if (offer.status !== "available") {
+      return { ok: false, message: offer.message };
+    }
     const result = await Subscriptions.purchaseProduct({
       productIdentifier: REMOVE_ADS_PRODUCT_ID,
     });
@@ -245,35 +301,46 @@ export async function restorePurchases(): Promise<PurchaseResult> {
       setAdFree(true);
       return { ok: true, message: "Purchases restored. Ads removed." };
     }
-    return { ok: false, message: "No previous purchase found for this account." };
+    if (result.responseCode === 1) {
+      setAdFree(false);
+      return { ok: false, message: "No completed Remove Ads purchase found for this account." };
+    }
+    return { ok: false, message: result.responseMessage || "Google Play could not verify your purchase." };
   } catch (e: any) {
     return { ok: false, message: e?.message || "Restore failed." };
   }
 }
 
+/** Attach Android's async purchase result listener before querying entitlements.
+ * The callback is a signal to re-query; the native layer filters PENDING items. */
+async function ensurePurchaseListener(): Promise<void> {
+  if (purchaseListenerInstalled || Capacitor.getPlatform() !== "android") return;
+  const { Subscriptions } = await import("@squareetlabs/capacitor-subscriptions");
+  await Subscriptions.addListener("ANDROID-PURCHASE-RESPONSE", async () => {
+    await refreshPurchaseStatus();
+  });
+  purchaseListenerInstalled = true;
+}
+
 async function refreshPurchaseStatus(): Promise<void> {
-  if (!isNative) return;
+  if (!isNative || purchaseRefreshInFlight) return;
+  purchaseRefreshInFlight = true;
   try {
+    await ensurePurchaseListener();
     const { Subscriptions } = await import("@squareetlabs/capacitor-subscriptions");
     const result = await Subscriptions.getCurrentEntitlements();
-    if (
-      result.responseCode === 0 &&
-      result.data?.some((t) => t.productIdentifier === REMOVE_ADS_PRODUCT_ID)
-    ) {
+    if (result.responseCode === 0 && result.data?.some(
+      (t) => t.productIdentifier === REMOVE_ADS_PRODUCT_ID
+    )) {
       setAdFree(true);
-      return;
+    } else if (result.responseCode === 1) {
+      // A successful empty query is evidence of no active purchase. Failures
+      // (offline, service not ready) must not erase cached entitlements.
+      setAdFree(false);
     }
-    // Android: also listen for the async purchase callback once.
-    Subscriptions.addListener("ANDROID-PURCHASE-RESPONSE", async () => {
-      const r = await Subscriptions.getCurrentEntitlements();
-      if (
-        r.responseCode === 0 &&
-        r.data?.some((t) => t.productIdentifier === REMOVE_ADS_PRODUCT_ID)
-      ) {
-        setAdFree(true);
-      }
-    });
-  } catch {
-    /* ignore — fall back to localStorage flag */
+  } catch (e) {
+    console.warn("[monetization] entitlement refresh failed", e);
+  } finally {
+    purchaseRefreshInFlight = false;
   }
 }
