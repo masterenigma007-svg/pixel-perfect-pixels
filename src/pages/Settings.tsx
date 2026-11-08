@@ -3,20 +3,36 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   isAdFree,
+  getRemoveAdsOffer,
   onAdFreeChange,
   purchaseRemoveAds,
   restorePurchases,
 } from "@/lib/monetization";
 import { getTheme, setTheme, onThemeChange, type ThemePref } from "@/lib/theme";
+import type { RemoveAdsOffer } from "@/lib/monetization";
 
 export default function Settings() {
   const [adFree, setAdFree] = useState(isAdFree());
   const [busy, setBusy] = useState<"buy" | "restore" | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [theme, setThemeState] = useState<ThemePref>(getTheme());
+  const [offer, setOffer] = useState<RemoveAdsOffer>({ status: "connecting", message: "Checking Google Play…" });
 
   useEffect(() => onAdFreeChange(setAdFree), []);
   useEffect(() => onThemeChange(setThemeState), []);
+  useEffect(() => {
+    let active = true;
+    const checkOffer = async () => {
+      let result = await getRemoveAdsOffer();
+      for (let attempt = 0; attempt < 4 && result.status === "connecting" && active; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+        if (active) result = await getRemoveAdsOffer();
+      }
+      if (active) setOffer(result);
+    };
+    void checkOffer();
+    return () => { active = false; };
+  }, []);
 
   const handleBuy = async () => {
     setBusy("buy");
@@ -103,9 +119,9 @@ export default function Settings() {
               </p>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-black text-primary">$1.99</div>
+              <div className="text-2xl font-black text-primary">{offer.status === "available" ? offer.price : "—"}</div>
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                one-time
+                {offer.status === "available" ? "one-time" : "not available yet"}
               </div>
             </div>
           </div>
@@ -117,11 +133,17 @@ export default function Settings() {
           ) : (
             <button
               onClick={handleBuy}
-              disabled={busy !== null}
+              disabled={busy !== null || offer.status !== "available"}
               className="w-full py-4 rounded-xl bg-gradient-to-r from-primary to-secondary text-primary-foreground font-bold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-60"
             >
-              {busy === "buy" ? "Processing…" : "Remove Ads — $1.99"}
+              {busy === "buy" ? "Processing…" : offer.status === "available" ? `Remove Ads — ${offer.price}` : "Remove Ads — Not Available"}
             </button>
+          )}
+
+          {offer.status !== "available" && !adFree && (
+            <p className="text-xs text-muted-foreground text-center" role="status">
+              {offer.message}
+            </p>
           )}
 
           <button
