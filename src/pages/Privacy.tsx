@@ -40,9 +40,10 @@ export default function Privacy() {
             <h2 className="text-xl font-semibold mb-2">The short version</h2>
             <p className="text-muted-foreground">
               Translation and game progress are primarily kept on your device.
-              The mobile app includes the Google Mobile Ads SDK, an optional Google Play
-              purchase to remove ads, and operating-system speech services. These third
-              parties may process certain technical data as described below.
+              The mobile app includes the Google Mobile Ads SDK, Google Play purchase
+              restoration, and optional operating-system speech services. New Remove Ads
+              purchases are temporarily unavailable. These third parties may process
+              data as described below.
             </p>
           </section>
 
@@ -102,9 +103,9 @@ export default function Privacy() {
           <section>
             <h2 className="text-xl font-semibold mb-2">Children</h2>
             <p className="text-muted-foreground">
-              The app is rated for users 12 and older and contains mild suggestive humor. We do not knowingly
-              collect any information from children of any age, because we do not collect information from
-              anyone.
+              Follow the age guidance and content rating on the app's Google Play listing.
+              The app does not ask users to create accounts or provide contact details.
+              Third-party services may process the data described in this policy.
             </p>
           </section>
 
