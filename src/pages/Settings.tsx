@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import {
   isAdFree,
   getRemoveAdsOffer,
+  REMOVE_ADS_UNAVAILABLE_MESSAGE,
   onAdFreeChange,
   purchaseRemoveAds,
   restorePurchases,
@@ -16,7 +17,7 @@ export default function Settings() {
   const [busy, setBusy] = useState<"buy" | "restore" | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [theme, setThemeState] = useState<ThemePref>(getTheme());
-  const [offer, setOffer] = useState<RemoveAdsOffer>({ status: "connecting", message: "Checking Google Play…" });
+  const [offer, setOffer] = useState<RemoveAdsOffer>({ status: "unavailable", message: REMOVE_ADS_UNAVAILABLE_MESSAGE });
 
   useEffect(() => onAdFreeChange(setAdFree), []);
   useEffect(() => onThemeChange(setThemeState), []);
@@ -115,7 +116,8 @@ export default function Settings() {
             <div>
               <h2 className="text-lg font-bold">Remove Ads</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                One-time purchase. Banners and interstitials disappear forever on this account.
+                Purchasing is temporarily unavailable while we update Google Play Billing.
+                All translator and game features remain available.
               </p>
             </div>
             <div className="text-right">
